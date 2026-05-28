@@ -44,6 +44,11 @@ volumes:
   trivy-cache:
   voice-data:
 
+x-mtls-mount: &mtls-mount
+  type: bind
+  source: ../infrastructure/certs
+  target: /etc/jarvis-certs
+
 services:
   # ===========================================================================
   # VECTOR DATABASE — Semantic memory for agents
@@ -54,8 +59,12 @@ services:
     restart: unless-stopped
     volumes:
       - chroma-data:/chroma/chroma
+      - *mtls-mount
     environment:
       - IS_PERSISTENT=TRUE
+      - CHROMA_SERVER_SSL_ENABLED=TRUE
+      - CHROMA_SERVER_SSL_CERT=/etc/jarvis-certs/chroma/chroma.crt
+      - CHROMA_SERVER_SSL_KEY=/etc/jarvis-certs/chroma/chroma.key
       - PERSIST_DIRECTORY=/chroma/chroma
       - ANONYMIZED_TELEMETRY=FALSE
     networks:
@@ -80,7 +89,14 @@ services:
     restart: unless-stopped
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      - *mtls-mount
+    command: >
+      redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      --tls-port 6379 --port 0
+      --tls-cert-file /etc/jarvis-certs/redis/redis.crt
+      --tls-key-file /etc/jarvis-certs/redis/redis.key
+      --tls-ca-cert-file /etc/jarvis-certs/ca/ca.crt
+      --tls-auth-clients yes
     networks:
       - jarvis-net
     ports:
@@ -102,9 +118,12 @@ services:
     volumes:
       - n8n-data:/home/node/.n8n
       - ../workflows:/backup-workflows
+      - *mtls-mount
     environment:
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
+      - N8N_PROTOCOL=https
+      - N8N_SSL_KEY=/etc/jarvis-certs/n8n/n8n.key
+      - N8N_SSL_CERT=/etc/jarvis-certs/n8n/n8n.crt
       - N8N_METRICS=true
       - N8N_DIAGNOSTICS_ENABLED=false
       - EXECUTIONS_DATA_PRUNE=true
@@ -127,12 +146,14 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
+      - *mtls-mount
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.console.libraries=/etc/prometheus/console_libraries"
       - "--web.console.templates=/etc/prometheus/consoles"
       - "--web.enable-lifecycle"
+      - "--web.config.file=/etc/prometheus/web-config.yml"
     networks:
       - jarvis-net
     ports:
@@ -149,11 +170,15 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/provisioning:/etc/grafana/provisioning
+      - *mtls-mount
     environment:
       - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana-admin-password
       - GF_INSTALL_PLUGINS=
       - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=/etc/jarvis-certs/grafana/grafana.crt
+      - GF_SERVER_CERT_KEY=/etc/jarvis-certs/grafana/grafana.key
+      - GF_SERVER_ROOT_URL=https://localhost:3000
     networks:
       - jarvis-net
     ports:
@@ -172,6 +197,7 @@ services:
     volumes:
       - loki-data:/loki
       - ./monitoring/loki-config.yml:/etc/loki/config.yml
+      - *mtls-mount
     command:
       - "-config.file=/etc/loki/config.yml"
     networks:
@@ -211,6 +237,7 @@ services:
     volumes:
       - vault-data:/vault/file
       - ../security/vault-config.hcl:/vault/config/vault-config.hcl
+      - *mtls-mount
     cap_add:
       - IPC_LOCK
     networks:
@@ -231,6 +258,7 @@ services:
     volumes:
       - searxng-data:/etc/searxng:rw
       - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+      - *mtls-mount
     environment:
       - SEARXNG_BASE_URL=http://localhost:8888
       - SEARXNG_SECRET=jarvis-local-dev-secret-key
@@ -249,9 +277,15 @@ services:
     restart: unless-stopped
     volumes:
       - neo4j-data:/data
+      - *mtls-mount
     environment:
       - NEO4J_AUTH=neo4j/jarvis-neo4j
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_ssl_policy_bolt_enabled=true
+      - NEO4J_dbms_ssl_policy_bolt_base_directory=/etc/jarvis-certs/neo4j
+      - NEO4J_dbms_ssl_policy_bolt_private_key=neo4j.key
+      - NEO4J_dbms_ssl_policy_bolt_public_chain=neo4j.crt
+      - NEO4J_dbms_ssl_policy_bolt_trusted_ca_dir=/etc/jarvis-certs/ca
     networks:
       - jarvis-net
     ports:
@@ -275,6 +309,7 @@ services:
         condition: service_healthy
     volumes:
       - temporal-data:/etc/temporal/data
+      - *mtls-mount
     environment:
       - DB=postgres12_pgx
       - DB_PORT=5432
@@ -383,6 +418,7 @@ services:
       - ./mcp-bridge-server.mjs:/app/mcp-bridge-server.mjs:ro
       - ../mcp-servers:/app/mcp-servers:ro
       - ../package.json:/app/package.json:ro
+      - *mtls-mount
     command: >
       sh -c "
         node mcp-bridge-server.mjs 8099
@@ -412,6 +448,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - trivy-cache:/root/.cache/trivy
       - ../:/jarvis:ro
+      - *mtls-mount
     networks:
       - jarvis-net
     entrypoint: ["sleep", "infinity"]
@@ -431,6 +468,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx-certs:/etc/nginx/certs
       - nginx-data:/var/cache/nginx
+      - *mtls-mount
     networks:
       - jarvis-net
     ports:
@@ -467,6 +505,7 @@ services:
       - "8081:8081"
     volumes:
       - voice-data:/app/data
+      - *mtls-mount
     logging: *default-logging
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]

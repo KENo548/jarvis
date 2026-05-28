@@ -134,7 +134,7 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 - [x] Implement full audit logging to append-only log files — `tools/audit_log.py`
 - [x] Add HashiCorp Vault for centralized secrets management — `tools/vault_client.py`
 - [x] Set up Trivy for container security scanning (replaces Falco — incompatible with Windows Docker Desktop) — `tools/trivy_scan.py`
-- [x] Implement zero-trust networking with mTLS — `tools/setup_mtls.py` (CA + per-service certs)
+- [x] Implement zero-trust networking with mTLS — `tools/setup_mtls.py` (CA + per-service certs), certs mounted to all containers, native TLS enabled on Redis/Grafana/n8n/Neo4j/Prometheus
 - [x] Add prompt injection defense — `tools/prompt_sanitizer.py` (regex patterns + content wrapping)
 - [x] Implement kill switch — `tools/governance.py` (SQLite flag checked before every action)
 - [x] Deploy Security Agent audits — `tools/security_audit.py` (CVE + log anomaly + policy validation)
