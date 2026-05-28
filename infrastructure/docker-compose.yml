@@ -43,6 +43,7 @@ volumes:
   nginx-data:
   trivy-cache:
   voice-data:
+  whisper-cache:
 
 x-mtls-mount: &mtls-mount
   type: bind
@@ -505,10 +506,11 @@ services:
       - "8081:8081"
     volumes:
       - voice-data:/app/data
+      - whisper-cache:/root/.cache/whisper
       - *mtls-mount
     logging: *default-logging
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

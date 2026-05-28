@@ -8,20 +8,30 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 import tempfile
 import os
+import sys
+import subprocess
 import whisper
+
+SUPPORTED_MODELS = ("tiny", "base", "small", "medium", "large")
 
 app = FastAPI(title="JARVIS Voice Service")
 
-# Load model on startup
 model = None
 
 @app.on_event("startup")
 async def load_model():
     global model
     model_size = os.getenv("WHISPER_MODEL", "base")
+    if model_size not in SUPPORTED_MODELS:
+        print(f"[!] Unknown model '{model_size}', falling back to 'base'")
+        model_size = "base"
+    try:
+        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        print("[!] ffmpeg not found — install ffmpeg for audio support")
     print(f"[*] Loading Whisper model: {model_size}")
     model = whisper.load_model(model_size)
-    print("[OK] Whisper model loaded")
+    print(f"[OK] Whisper model '{model_size}' loaded")
 
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):

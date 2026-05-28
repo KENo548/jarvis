@@ -9,9 +9,15 @@ import os
 import tempfile
 import numpy as np
 
+SUPPORTED_MODELS = ("tiny", "base", "small", "medium", "large")
+
 def transcribe(audio_path: str = None, model_size: str = "base") -> str:
     """Transcribe audio file to text using Whisper."""
     import whisper
+
+    if model_size not in SUPPORTED_MODELS:
+        print(f"[!] Unknown model '{model_size}', falling back to 'base'")
+        model_size = "base"
     
     if audio_path is None:
         # Record from microphone
