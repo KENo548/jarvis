@@ -42,6 +42,7 @@ volumes:
   nginx-certs:
   nginx-data:
   trivy-cache:
+  voice-data:
 
 services:
   # ===========================================================================
@@ -448,6 +449,32 @@ services:
     profiles:
       - https
       - production
+
+  # ===========================================================================
+  # VOICE INPUT — Whisper STT Service
+  # ===========================================================================
+  voice:
+    image: jarvis/voice:latest
+    build:
+      context: ../services/voice
+    container_name: jarvis-voice
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL=base
+    networks:
+      - jarvis-net
+    ports:
+      - "8081:8081"
+    volumes:
+      - voice-data:/app/data
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - voice
 
 secrets:
   grafana-admin-password:
