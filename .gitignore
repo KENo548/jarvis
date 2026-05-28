@@ -13,6 +13,9 @@ secrets/*
 
 # Specific sensitive files
 security/vault-keys.txt
+security/neo4j-auth.txt
+security/.vault-keys.json
+security/.vault-root-token
 security/*.txt
 
 # API keys and tokens
