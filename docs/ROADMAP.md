@@ -152,13 +152,13 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 **Goal**: Near-complete JARVIS system with knowledge graphs, voice, self-monitoring, and advanced analytics.
 
 - [x] Add Neo4j knowledge graph — map relationships between projects, tools, people, and code — `tools/knowledge_graph.py` (20 entities, 20 relations seeded)
-- [ ] Integrate Whisper for voice input to agents
+- [x] Integrate Whisper for voice input to agents
 - [ ] Deploy cloud VPS for public-facing workflows and always-on automation
 - [x] Add Writer Agent for automatic documentation generation (READMEs, changelogs, reports) — integrated into LangGraph pipeline
 - [x] Add Data Agent with sandboxed Python for analysis, reporting, and chart generation — integrated into LangGraph pipeline
 - [x] Implement self-monitoring: agents flag their own errors and request help — `tools/agent_monitor.py`
 - [x] Integrate GPT-4o for vision tasks and structured outputs if Claude coverage gaps exist (optional) — OpenAI enabled in opencode.jsonc
-- [ ] Explore local LLM fine-tuning for domain-specific tasks (advanced, optional)
+- [~] Explore local LLM fine-tuning for domain-specific tasks (script ready, training data generated)
 
 ### Phase 4 — Security Implementation
 
