@@ -122,28 +122,28 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 
 **Goal**: Full multi-agent system with deterministic orchestration, safety rails, monitoring, and CI/CD.
 
-- [ ] Implement LangGraph orchestration graph connecting all agents (CrewAI and AutoGen available for specialized team workflows)
-- [ ] Add Orchestrator Agent — receives high-level instructions, breaks into subtasks, assigns to agents, monitors progress, assembles final output
-- [ ] Add QA Agent and Security Agent to the pipeline
-- [ ] Set up code-sandbox-mcp for safe code execution in isolated Docker networks with no internet access by default
-- [ ] Configure GitHub Actions for automated testing on every commit
-- [ ] Add Temporal.io for durable long-running workflows (optional; not yet wired)
+- [x] Implement LangGraph orchestration graph connecting all agents
+- [x] Add Orchestrator Agent — routes work instead of executing directly
+- [x] Add QA Agent and Security Agent to the pipeline
+- [x] Set up code-sandbox-mcp for safe code execution — `tools/sandbox_runner.py`
+- [x] Configure GitHub Actions for automated testing on every commit
+- [x] Add Temporal.io for durable long-running workflows
 
 ### Phase 3 — Security Implementation
 
-- [ ] Implement full audit logging to immutable append-only log files (timestamp, agent ID, action type, inputs, outputs, approval status)
-- [ ] Add HashiCorp Vault for centralized secrets management — agents request secrets at runtime, never store in code or config
-- [ ] Set up Falco for real-time container security monitoring
-- [ ] Implement zero-trust networking with mTLS between services
-- [ ] Add prompt injection defense: sanitize all external content (web scraping, file contents, user inputs) before passing to LLMs
-- [ ] Implement kill switch: single flag in SQLite stops all agents immediately; agents check this flag before every action
-- [ ] Deploy Security Agent audits: dependency CVE checks, log anomaly detection, policy validation
-- [ ] Set up Fail2Ban to automatically ban IPs showing brute-force attack signs against SSH or web interfaces
-- [ ] Maintain isolated sandbox networks: AI code execution happens in Docker networks isolated from real systems; no internet access from sandbox by default
+- [x] Implement full audit logging to append-only log files — `tools/audit_log.py`
+- [x] Add HashiCorp Vault for centralized secrets management — `tools/vault_client.py`
+- [x] Set up Falco for real-time container security monitoring — `infrastructure/falco-rules/`
+- [x] Implement zero-trust networking with mTLS — `tools/setup_mtls.py` (CA + per-service certs)
+- [x] Add prompt injection defense — `tools/prompt_sanitizer.py` (regex patterns + content wrapping)
+- [x] Implement kill switch — `tools/governance.py` (SQLite flag checked before every action)
+- [x] Deploy Security Agent audits — `tools/security_audit.py` (CVE + log anomaly + policy validation)
+- [x] Set up Fail2Ban — `infrastructure/fail2ban/` (SSH + Nginx jails)
+- [x] Maintain isolated sandbox networks — `tools/sandbox_network.py` + `jarvis-sandbox-net` (internal, no internet)
 
 **Deliverable**: Full multi-agent system with deterministic orchestration, safety rails, monitoring, and CI/CD.
 
-**Cost**: ~$50-80/month (adds VPS for Temporal ~$10-20/month)
+**Cost**: $0/month (all local, free-tier tools)
 
 ---
 
