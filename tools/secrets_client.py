@@ -34,6 +34,13 @@ def set_secret(service: str, key: str, value: str) -> None:
     """Store a secret in the OS keyring."""
     full_service = f"{SERVICE_PREFIX}/{service}"
     keyring.set_password(full_service, key, value)
+    # Update registry
+    reg = _load_registry()
+    svc_keys = reg.get(full_service, [])
+    if key not in svc_keys:
+        svc_keys.append(key)
+    reg[full_service] = svc_keys
+    _save_registry(reg)
     print(f"OK: Stored {full_service}/{key}")
 
 
@@ -54,22 +61,51 @@ def delete_secret(service: str, key: str) -> None:
     full_service = f"{SERVICE_PREFIX}/{service}"
     try:
         keyring.delete_password(full_service, key)
+        # Update registry
+        reg = _load_registry()
+        svc_keys = reg.get(full_service, [])
+        if key in svc_keys:
+            svc_keys.remove(key)
+            reg[full_service] = svc_keys
+            _save_registry(reg)
         print(f"OK: Deleted {full_service}/{key}")
     except keyring.errors.PasswordDeleteError:
         print(f"NOT FOUND: {full_service}/{key}", file=sys.stderr)
         sys.exit(1)
 
 
+def _registry_path() -> str:
+    """Path to the local secret registry (tracks which keys exist)."""
+    import pathlib
+    return str(pathlib.Path(__file__).resolve().parent.parent / "security" / ".secret-registry.json")
+
+
+def _load_registry() -> dict:
+    import pathlib, json
+    p = pathlib.Path(_registry_path())
+    if p.exists():
+        return json.loads(p.read_text())
+    return {}
+
+
+def _save_registry(reg: dict) -> None:
+    import pathlib, json
+    p = pathlib.Path(_registry_path())
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(reg, indent=2))
+
+
 def list_secrets(service: str) -> None:
     """List all stored secret keys for a service (values not shown)."""
-    full_service = f"{SERVICE_PREFIX}/{service}"
-    try:
-        from keyring.backends import Windows
-        cred = Windows.WinVaultBackend()
-        # keyring doesn't have a native list; we track via a registry
-        print(f"Secrets stored under {full_service}: (use 'get' to retrieve)")
-    except Exception:
-        print(f"Secrets stored under {full_service}: (use 'get' to retrieve)")
+    reg = _load_registry()
+    svc_key = f"{SERVICE_PREFIX}/{service}"
+    keys = reg.get(svc_key, [])
+    if keys:
+        print(f"Secrets stored under {svc_key}:")
+        for k in keys:
+            print(f"  - {k}")
+    else:
+        print(f"No secrets found under {svc_key}")
 
 
 def migrate_from_vault(vault_addr: str, vault_token: str) -> None:

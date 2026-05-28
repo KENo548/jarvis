@@ -34,8 +34,12 @@ $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if (-not $pythonCmd) { $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue }
 if ($pythonCmd) {
     $pythonVersion = & python --version 2>&1
-    $pythonMinor = [int]($pythonVersion -split ' ' | Select-Object -Last 1 -split '\.' | Select-Object -First 1)
-    if ($pythonMinor -ge 11) {
+    $pythonParts = ($pythonVersion -split ' ' | Select-Object -Last 1) -split '\.'
+    $pythonMajor = [int]$pythonParts[0]
+    $pythonMinor = [int]$pythonParts[1]
+    if ($pythonMajor -eq 3 -and $pythonMinor -ge 11) {
+        Write-Host "  PASS: $pythonVersion (>= 3.11 required)" -ForegroundColor Green
+    } elseif ($pythonMajor -gt 3) {
         Write-Host "  PASS: $pythonVersion (>= 3.11 required)" -ForegroundColor Green
     } else {
         Write-Host "  FAIL: $pythonVersion found, but 3.11+ required" -ForegroundColor Red
