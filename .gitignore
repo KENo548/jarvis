@@ -28,6 +28,7 @@ security/*.txt
 **/*.key
 **/id_rsa*
 **/*.cert
+infrastructure/certs/**/*.key
 
 # Vector database data (can contain indexed documents)
 memory/chroma/*
