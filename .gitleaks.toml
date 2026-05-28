@@ -1,12 +1,14 @@
 title = "JARVIS gitleaks configuration"
 
-[allowlist]
+[[allowlists]]
 description = "Known-safe paths"
 paths = [
-    "(node_modules)",
-    "__pycache__",
-    ".git",
-    ".env.example",
+    '''(^|.*/)(node_modules)(/|$)''',
+    '''(^|.*/)(\.venv-1)(/|$)''',
+    '''(^|.*/)(\.venv)(/|$)''',
+    '''(^|.*/)(__pycache__)(/|$)''',
+    '''(^|.*/)(\.git)(/|$)''',
+    '''(^|.*/)(\.env\.example)(/|$)''',
 ]
 
 [[rules]]

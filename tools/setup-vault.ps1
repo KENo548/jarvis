@@ -146,11 +146,11 @@ function Set-VaultSecret {
 }
 
 # Store placeholder secrets (replace with real values later)
-Set-VaultSecret "api/anthropic" @{ api_key = "REPLACE_WITH_REAL_KEY"; model = "claude-sonnet-4-20250514" }
-Set-VaultSecret "api/github" @{ token = "REPLACE_WITH_REAL_TOKEN" }
+Set-VaultSecret "api/anthropic" @{ api_key = "TO_BE_SET"; model = "claude-sonnet-4-20250514" }
+Set-VaultSecret "api/github" @{ token = "TO_BE_SET" }
 Set-VaultSecret "agents/coder" @{ name = "coder-001"; permissions = "filesystem,github,sandbox" }
 Set-VaultSecret "agents/researcher" @{ name = "researcher-001"; permissions = "browser,search,fetch" }
-Set-VaultSecret "system/monitoring" @{ grafana_password = "REPLACE_WITH_REAL_PASSWORD" }
+Set-VaultSecret "system/monitoring" @{ grafana_password = "TO_BE_SET" }
 
 Write-Host "`n=== Vault Setup Complete ===" -ForegroundColor Cyan
 Write-Host "Vault is initialized, unsealed, and ready." -ForegroundColor Green
@@ -159,6 +159,6 @@ Write-Host "  UI:       $VaultAddr/ui" -ForegroundColor White
 Write-Host "  Keys:     $KeysFile" -ForegroundColor White
 Write-Host "  Token:    $TokenFile" -ForegroundColor White
 Write-Host "`nNext steps:" -ForegroundColor Yellow
-Write-Host "  1. Replace REPLACE_WITH_REAL_KEY with your Anthropic API key" -ForegroundColor White
-Write-Host "  2. Replace REPLACE_WITH_REAL_TOKEN with your GitHub token" -ForegroundColor White
+Write-Host "  1. Replace TO_BE_SET with your Anthropic API key" -ForegroundColor White
+Write-Host "  2. Replace TO_BE_SET with your GitHub token" -ForegroundColor White
 Write-Host "  3. Set VAULT_ADDR=$VaultAddr and VAULT_TOKEN in your environment" -ForegroundColor White

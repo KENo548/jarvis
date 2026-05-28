@@ -88,8 +88,8 @@ def store_secret(path, data):
     else:
         print(f"  Stored: {path}")
 
-store_secret("api/anthropic", {"api_key": "REPLACE_WITH_REAL_KEY", "model": "claude-sonnet-4-20250514"})
-store_secret("api/github", {"token": "REPLACE_WITH_REAL_TOKEN"})
+store_secret("api/anthropic", {"api_key": "TO_BE_SET", "model": "claude-sonnet-4-20250514"})
+store_secret("api/github", {"token": "TO_BE_SET"})
 store_secret("agents/coder", {"name": "coder-001", "permissions": "filesystem,github,sandbox"})
 store_secret("agents/researcher", {"name": "researcher-001", "permissions": "browser,search,fetch"})
 
