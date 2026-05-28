@@ -1,0 +1,94 @@
+# =============================================================================
+# JARVIS Docker Compose — mTLS Override
+# =============================================================================
+# Adds mutual TLS certificates to all services for zero-trust networking.
+#
+# Usage:
+#   1. Generate certs: python tools/setup_mtls.py init
+#   2. Run with mTLS: docker compose -f docker-compose.yml -f docker-compose.mtls.yml up -d
+#   3. Without mTLS:  docker compose -f docker-compose.yml up -d (default)
+#
+# Each service gets:
+#   - Its own cert + key at /certs/<service>/<service>.crt|.key
+#   - The CA cert at /certs/ca/ca.crt (to verify peer services)
+#   - Environment variables pointing to cert paths
+# =============================================================================
+
+services:
+  chroma:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/chroma/chroma.crt:/certs/chroma/chroma.crt:ro
+      - ./certs/chroma/chroma.key:/certs/chroma/chroma.key:ro
+    environment:
+      - CHROMA_SERVER_SSL=true
+      - CHROMA_SERVER_CERTFILE=/certs/chroma/chroma.crt
+      - CHROMA_SERVER_KEYFILE=/certs/chroma/chroma.key
+
+  redis:
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tls-port 6380
+      --port 0
+      --tls-cert-file /certs/redis/redis.crt
+      --tls-key-file /certs/redis/redis.key
+      --tls-ca-cert-file /certs/ca/ca.crt
+      --tls-auth-clients optional
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/redis/redis.crt:/certs/redis/redis.crt:ro
+      - ./certs/redis/redis.key:/certs/redis/redis.key:ro
+    ports:
+      - "6380:6380"
+
+  n8n:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/n8n/n8n.crt:/certs/n8n/n8n.crt:ro
+      - ./certs/n8n/n8n.key:/certs/n8n/n8n.key:ro
+    environment:
+      - N8N_PROTOCOL=https
+      - N8N_SSL_KEY=/certs/n8n/n8n.key
+      - N8N_SSL_CERT=/certs/n8n/n8n.crt
+
+  grafana:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/grafana/grafana.crt:/certs/grafana/grafana.crt:ro
+      - ./certs/grafana/grafana.key:/certs/grafana/grafana.key:ro
+    environment:
+      - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=/certs/grafana/grafana.crt
+      - GF_SERVER_KEY_FILE=/certs/grafana/grafana.key
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+  loki:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/loki/loki.crt:/certs/loki/loki.crt:ro
+      - ./certs/loki/loki.key:/certs/loki/loki.key:ro
+
+  prometheus:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/prometheus/prometheus.crt:/certs/prometheus/prometheus.crt:ro
+      - ./certs/prometheus/prometheus.key:/certs/prometheus/prometheus.key:ro
+
+  vault:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/vault/vault.crt:/certs/vault/vault.crt:ro
+      - ./certs/vault/vault.key:/certs/vault/vault.key:ro
+
+  searxng:
+    volumes:
+      - ./certs/ca/ca.crt:/certs/ca/ca.crt:ro
+      - ./certs/searxng/searxng.crt:/certs/searxng/searxng.crt:ro
+      - ./certs/searxng/searxng.key:/certs/searxng/searxng.key:ro
+
+  nginx:
+    volumes:
+      - ./certs:/etc/nginx/certs:ro

@@ -186,6 +186,20 @@ def test_mtls_setup():
     test("has SAN config", "subjectAltName" in content or "alt_names" in content)
     test("defines service list", "SERVICES" in content)
 
+    # Test docker-compose.mtls.yml override exists and is wired
+    mtls_compose = PROJECT_ROOT / "infrastructure" / "docker-compose.mtls.yml"
+    test("docker-compose.mtls.yml exists", mtls_compose.exists())
+
+    mtls_content = mtls_compose.read_text()
+    test("mounts CA cert", "ca/ca.crt" in mtls_content)
+    test("mounts chroma cert", "chroma/chroma.crt" in mtls_content)
+    test("mounts redis cert + enables TLS", "redis/redis.crt" in mtls_content and "--tls-port" in mtls_content)
+    test("mounts grafana cert + enables HTTPS", "grafana/grafana.crt" in mtls_content and "GF_SERVER_PROTOCOL=https" in mtls_content)
+    test("mounts n8n cert + enables HTTPS", "n8n/n8n.crt" in mtls_content and "N8N_PROTOCOL=https" in mtls_content)
+    test("mounts vault cert", "vault/vault.crt" in mtls_content)
+    test("mounts all certs into nginx", "nginx" in mtls_content and "/etc/nginx/certs" in mtls_content)
+    test("all service certs use relative paths (./certs/)", "./certs/" in mtls_content)
+
 
 def test_prompt_sanitizer():
     """Verify prompt sanitizer works."""
