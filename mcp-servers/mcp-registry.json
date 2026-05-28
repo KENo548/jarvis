@@ -197,7 +197,7 @@
                                            "description": "Google Calendar integration — schedule events, check availability, manage reminders.",
                                            "package": "@modelcontextprotocol/server-google-calendar",
                                            "install_command": "npx @modelcontextprotocol/server-google-calendar",
-                                           "enabled": false,
+                                           "enabled": true,
                                            "phase": 2,
                                            "security": {
                                                "requires_auth": true,
