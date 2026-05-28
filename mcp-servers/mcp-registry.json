@@ -192,6 +192,20 @@
                                                "allowed_queries": ["MATCH","CREATE","MERGE"],
                                                "blocked_queries": ["CALL apoc", "apoc.system"]
                                            }
-                            }
+                            },
+                        "calendar-mcp": {
+                                           "description": "Google Calendar integration — schedule events, check availability, manage reminders.",
+                                           "package": "@modelcontextprotocol/server-google-calendar",
+                                           "install_command": "npx @modelcontextprotocol/server-google-calendar",
+                                           "enabled": false,
+                                           "phase": 2,
+                                           "security": {
+                                               "requires_auth": true,
+                                               "auth_type": "oauth2",
+                                               "allowed_actions": ["read_events", "create_event", "update_event"],
+                                               "blocked_actions": ["delete_all_events"],
+                                               "max_events_per_query": 50
+                                           }
+                                           }
                     }
 }

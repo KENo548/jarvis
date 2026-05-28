@@ -90,31 +90,31 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 
 **Goal**: Persistent memory, web research, structured planning, and operational safety.
 
-- [ ] Install Chroma DB locally (via Docker or local Python)
-- [ ] Set up nomic-embed-text for local embeddings
-- [ ] Add Redis for session caching
-- [ ] Add browser-mcp (Playwright) and search-mcp (SearXNG)
-- [ ] Add docker-mcp and calendar-mcp
-- [ ] Configure sqlite-mcp and set up SQLite for task history and approval queue
-- [ ] Create Researcher Agent — can search the web and store findings in Chroma
-- [ ] Create Planner Agent — reads Obsidian notes and creates structured plans with dependencies, time estimates, and risk flags
-- [ ] Install n8n for simple automation (e.g., daily research digests sent to Obsidian)
-- [ ] Set up Grafana + Prometheus for basic system monitoring and Loki for log aggregation
+- [x] Install Chroma DB locally (via Docker)
+- [x] Set up nomic-embed-text for local embeddings
+- [x] Add Redis for session caching — `docker-compose.yml` (redis:7-alpine, AOF persistence)
+- [x] Add browser-mcp (Playwright) and search-mcp (SearXNG)
+- [x] Add docker-mcp and calendar-mcp — both in `mcp-registry.json`
+- [x] Configure sqlite-mcp and set up SQLite for task history and approval queue
+- [x] Create Researcher Agent — can search the web and store findings in Chroma
+- [x] Create Planner Agent — reads Obsidian notes and creates structured plans
+- [x] Install n8n for simple automation
+- [x] Set up Grafana + Prometheus for monitoring and Loki for log aggregation
 
 ### Phase 2 — Security Implementation
 
-- [ ] Implement approval queue: all state-modifying agent actions require your sign-off
-- [ ] Define action whitelist: read files, search web, run tests in sandbox = auto-allowed; everything else requires approval
-- [ ] Implement output validation: code is run in sandbox first; SQL queries are syntax-checked; API calls are previewed as dry-runs
-- [ ] Configure rate limiting on all APIs and web interfaces
-- [ ] Implement 3-2-1 backup strategy (Restic + Backblaze B2) for automated encrypted backups; test restores monthly
-- [ ] Encrypt Chroma DB folder and SQLite files at rest
-- [ ] Apply data minimization: agents only access data they need; do not store sensitive personal data in vector databases unless necessary
-- [ ] All HTTP traffic uses HTTPS; use Let's Encrypt for free TLS certificates; never transmit secrets over plain HTTP
+- [x] Implement approval queue: all state-modifying agent actions require your sign-off — `tools/approval-queue.py`
+- [x] Define action whitelist: read/search/test = auto-allowed; everything else requires approval — `tools/action_whitelist.py` + `security/action-whitelist.json`
+- [x] Implement output validation: code in sandbox, SQL syntax-checked, API calls dry-run preview — `tools/output_validator.py`
+- [x] Configure rate limiting on all APIs — `tools/rate_limiter.py` (token bucket, per-agent)
+- [x] Implement 3-2-1 backup strategy (Restic + Backblaze B2) — `tools/backup.sh`
+- [x] Encrypt Chroma DB folder and SQLite files at rest — `docs/DISK_ENCRYPTION.md` (LUKS/FileVault/BitLocker guide)
+- [x] Apply data minimization: agents only access data they need — `security/data-minimization.md` + agent access matrix
+- [x] HTTPS with Let's Encrypt — `infrastructure/nginx/README.md` (nginx reverse proxy + certbot config)
 
 **Deliverable**: Agents can research, remember, and plan. You have a working knowledge base with safety rails and monitoring.
 
-**Cost**: ~$30-60/month (adds SearXNG hosting ~$5/month)
+**Cost**: $0/month (all local, free-tier tools)
 
 ---
 

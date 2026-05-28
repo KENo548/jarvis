@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "description": "JARVIS Action Whitelist — runtime enforcement of allowed agent actions",
+  "auto_allow": {
+    "read": ["read_file", "read_directory", "search_files", "grep"],
+    "web": ["web_search", "fetch_url", "browse_page"],
+    "test": ["run_tests", "run_pytest", "run_lint"],
+    "memory": ["store_memory", "recall_memory", "search_memory"],
+    "analysis": ["analyze_code", "review_diff", "check_dependencies"]
+  },
+  "require_approval": {
+    "write": ["write_file", "edit_file", "delete_file"],
+    "git": ["git_commit", "git_push", "git_merge", "create_pr"],
+    "deploy": ["deploy", "restart_service", "modify_docker"],
+    "shell": ["run_shell_command", "install_package"],
+    "secrets": ["read_secret", "write_secret", "rotate_key"],
+    "database": ["write_query", "schema_change", "backup_database"]
+  },
+  "blocked": ["drop_table", "delete_repo", "force_push", "disable_firewall"]
+}

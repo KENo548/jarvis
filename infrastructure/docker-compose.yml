@@ -32,6 +32,7 @@ volumes:
   searxng-data:
   temporal-data:
   temporal-pg-data:
+  redis-data:
 
 services:
   # ===========================================================================
@@ -59,6 +60,27 @@ services:
       timeout: 10s
       retries: 3
     # Security: no public exposure. Agents connect via internal network.
+
+  # ===========================================================================
+  # SESSION CACHE — Redis (Phase 2)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - jarvis-net
+    ports:
+      - "6379:6379"
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # ===========================================================================
   # WORKFLOW AUTOMATION — n8n (visual drag-and-drop pipelines)

@@ -51,6 +51,7 @@ data/
 .playwright-mcp/
 node_modules.off/
 --help
+memory/rate-limiter-state.json
 
 # OS files
 .DS_Store
