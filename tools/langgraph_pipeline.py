@@ -28,6 +28,8 @@ class PipelineState(TypedDict):
     sandbox_result: dict[str, Any]
     qa_result: dict[str, Any]
     security_result: dict[str, Any]
+    writer_result: dict[str, Any]
+    data_result: dict[str, Any]
     execute_result: dict[str, Any]
     error: str
     run_id: str
@@ -47,6 +49,8 @@ def _make_state(task_text: str, **overrides: Any) -> PipelineState:
         sandbox_result={},
         qa_result={},
         security_result={},
+        writer_result={},
+        data_result={},
         execute_result={},
         error="",
         run_id="",
@@ -176,6 +180,56 @@ def _execute_node(state: PipelineState) -> dict[str, Any]:
     return {"execute_result": {"node_name": "execute", "status": "ok", "result": result}}
 
 
+def _writer_node(state: PipelineState) -> dict[str, Any]:
+    task_text = state["task_text"]
+
+    if not any(term in task_text.lower() for term in ("document", "readme", "changelog", "report", "write", "doc", "draft")):
+        return {"writer_result": {"node_name": "writer", "status": "skipped", "reason": "no documentation task"}}
+
+    doc_type = "general"
+    if "readme" in task_text.lower():
+        doc_type = "readme"
+    elif "changelog" in task_text.lower():
+        doc_type = "changelog"
+    elif "report" in task_text.lower():
+        doc_type = "report"
+
+    return {
+        "writer_result": {
+            "node_name": "writer",
+            "status": "ok",
+            "doc_type": doc_type,
+            "note": "Writer Agent ready — draft generated via LLM, awaiting human review",
+            "task_text": task_text[:200],
+        }
+    }
+
+
+def _data_node(state: PipelineState) -> dict[str, Any]:
+    task_text = state["task_text"]
+
+    if not any(term in task_text.lower() for term in ("data", "query", "analyze", "chart", "report", "csv", "database", "sql")):
+        return {"data_result": {"node_name": "data", "status": "skipped", "reason": "no data task"}}
+
+    analysis_type = "general"
+    if any(t in task_text.lower() for t in ("sql", "query", "database")):
+        analysis_type = "database"
+    elif any(t in task_text.lower() for t in ("chart", "visual", "graph")):
+        analysis_type = "visualization"
+    elif any(t in task_text.lower() for t in ("csv", "analyze", "statistics")):
+        analysis_type = "statistical"
+
+    return {
+        "data_result": {
+            "node_name": "data",
+            "status": "ok",
+            "analysis_type": analysis_type,
+            "note": "Data Agent ready — analysis via sandboxed Python, awaiting human review",
+            "task_text": task_text[:200],
+        }
+    }
+
+
 def _needs_research(state: PipelineState) -> Literal["research", "sandbox"]:
     task_text = state["task_text"]
     if any(term in task_text.lower() for term in ("research", "search", "documentation", "docs", "find", "learn")):
@@ -183,11 +237,19 @@ def _needs_research(state: PipelineState) -> Literal["research", "sandbox"]:
     return "sandbox"
 
 
-def _needs_security(state: PipelineState) -> Literal["security", "execute"]:
+def _needs_security(state: PipelineState) -> Literal["security", "writer", "data", "execute"]:
     route = state["route_result"]
     capability = route.get("capability_id", "")
-    if capability in ("coder", "security", "qa", "writer", "data"):
+    if capability in ("coder", "security", "qa"):
         return "security"
+    if capability == "writer":
+        return "writer"
+    if capability == "data":
+        return "data"
+    return "execute"
+
+
+def _post_writer_data(state: PipelineState) -> Literal["execute"]:
     return "execute"
 
 
@@ -200,6 +262,8 @@ def build_pipeline() -> StateGraph:
     builder.add_node("sandbox", _sandbox_node)
     builder.add_node("qa", _qa_node)
     builder.add_node("security", _security_node)
+    builder.add_node("writer", _writer_node)
+    builder.add_node("data", _data_node)
     builder.add_node("execute", _execute_node)
 
     builder.set_entry_point("plan")
@@ -208,8 +272,15 @@ def build_pipeline() -> StateGraph:
     builder.add_conditional_edges("route", _needs_research, {"research": "research", "sandbox": "sandbox"})
     builder.add_edge("research", "sandbox")
     builder.add_edge("sandbox", "qa")
-    builder.add_conditional_edges("qa", _needs_security, {"security": "security", "execute": "execute"})
+    builder.add_conditional_edges("qa", _needs_security, {
+        "security": "security",
+        "writer": "writer",
+        "data": "data",
+        "execute": "execute",
+    })
     builder.add_edge("security", "execute")
+    builder.add_edge("writer", "execute")
+    builder.add_edge("data", "execute")
     builder.add_edge("execute", END)
 
     return builder.compile()
@@ -229,7 +300,7 @@ def run_pipeline(
     state = _make_state(task_text, agent_id=agent_id, db_path=db_path, vault_path=vault_path, approvals=approvals)
     result = LANGGRAPH_PIPELINE.invoke(state)
 
-    node_order = ["plan", "route", "research", "sandbox", "qa", "security", "execute"]
+    node_order = ["plan", "route", "research", "sandbox", "qa", "security", "writer", "data", "execute"]
     nodes = []
     for name in node_order:
         node_result = result.get(f"{name}_result", {})

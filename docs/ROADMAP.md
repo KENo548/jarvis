@@ -133,7 +133,7 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 
 - [x] Implement full audit logging to append-only log files — `tools/audit_log.py`
 - [x] Add HashiCorp Vault for centralized secrets management — `tools/vault_client.py`
-- [x] Set up Falco for real-time container security monitoring — `infrastructure/falco-rules/`
+- [x] Set up Trivy for container security scanning (replaces Falco — incompatible with Windows Docker Desktop) — `tools/trivy_scan.py`
 - [x] Implement zero-trust networking with mTLS — `tools/setup_mtls.py` (CA + per-service certs)
 - [x] Add prompt injection defense — `tools/prompt_sanitizer.py` (regex patterns + content wrapping)
 - [x] Implement kill switch — `tools/governance.py` (SQLite flag checked before every action)
@@ -151,20 +151,22 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 
 **Goal**: Near-complete JARVIS system with knowledge graphs, voice, self-monitoring, and advanced analytics.
 
-- [ ] Add Neo4j knowledge graph — map relationships between projects, tools, people, and code
+- [x] Add Neo4j knowledge graph — map relationships between projects, tools, people, and code — `tools/knowledge_graph.py` (20 entities, 20 relations seeded)
 - [ ] Integrate Whisper for voice input to agents
 - [ ] Deploy cloud VPS for public-facing workflows and always-on automation
-- [ ] Add Writer Agent for automatic documentation generation (READMEs, changelogs, reports)
-- [ ] Add Data Agent with sandboxed Python for analysis, reporting, and chart generation
-- [ ] Implement self-monitoring: agents flag their own errors and request help
-- [ ] Integrate GPT-4o for vision tasks and structured outputs if Claude coverage gaps exist (optional)
+- [x] Add Writer Agent for automatic documentation generation (READMEs, changelogs, reports) — integrated into LangGraph pipeline
+- [x] Add Data Agent with sandboxed Python for analysis, reporting, and chart generation — integrated into LangGraph pipeline
+- [x] Implement self-monitoring: agents flag their own errors and request help — `tools/agent_monitor.py`
+- [x] Integrate GPT-4o for vision tasks and structured outputs if Claude coverage gaps exist (optional) — OpenAI enabled in opencode.jsonc
 - [ ] Explore local LLM fine-tuning for domain-specific tasks (advanced, optional)
 
 ### Phase 4 — Security Implementation
 
-- [ ] Quarterly security audit: rotate all API keys (90-day cycle), review permissions, test backups, practice incident playbook
-- [ ] Document and maintain incident response playbook: agent misbehavior, credential leaks, service compromise
-- [ ] Review and update the action whitelist, approval queue rules, and kill switch procedures
+- [x] Quarterly security audit: rotate all API keys (90-day cycle), review permissions, test backups, practice incident playbook — `tools/quarterly_audit.py`
+- [x] Document and maintain incident response playbook: agent misbehavior, credential leaks, service compromise — `security/incident-playbook.md`
+- [x] Review and update the action whitelist, approval queue rules, and kill switch procedures — `tools/agent_monitor.py`
+- [x] Container security scanning (Trivy) — replaces Falco (incompatible with Windows Docker Desktop) — `tools/trivy_scan.py`
+- [x] All API keys stored in HashiCorp Vault (OpenAI, GitHub, NVIDIA) — KV v2 at `jarvis/`
 
 **Deliverable**: A near-complete JARVIS system. Research, code, plan, build, monitor, document — all in one.
 

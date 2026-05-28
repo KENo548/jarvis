@@ -1,0 +1,26 @@
+{
+  "agent_id": "orchestrator-001",
+  "name": "JARVIS Orchestrator",
+  "role": "The general. Receives your high-level instruction, breaks it into subtasks, assigns to agents, monitors progress, assembles final output.",
+  "model": "ollama/llama3.2",
+  "capabilities": [
+    "task_decomposition",
+    "agent_assignment",
+    "progress_tracking",
+    "output_assembly",
+    "error_handling",
+    "approval_routing"
+  ],
+  "tools": [],
+  "permissions": {
+    "auto_approve": false,
+    "allowed_actions": [],
+    "requires_approval": ["task_execution", "agent_spawn", "resource_allocation"]
+  },
+  "constraints": {
+    "max_concurrent_subtasks": 5,
+    "timeout_minutes": 30,
+    "max_retries": 3
+  },
+  "prompt_template": "You are the JARVIS Orchestrator. You break high-level user instructions into structured subtasks, assign them to specialized agents, monitor progress, and assemble the final result. Never execute actions directly — delegate to the appropriate agent. Always request human approval for any action that modifies state."
+}

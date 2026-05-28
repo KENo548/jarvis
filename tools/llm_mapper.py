@@ -14,21 +14,45 @@ Usage:
 This file is intentionally simple and local-only.
 """
 MAPPER = {
+    "ollama/llama3.2": {
+        "type": "ollama",
+        "runner": "ollama",
+        "endpoint": "http://localhost:11434",
+        "model": "llama3.2:latest",
+        "notes": "Local LLM via Ollama. Free, private, runs offline."
+    },
+    "ollama/nomic-embed-text": {
+        "type": "ollama",
+        "runner": "ollama",
+        "endpoint": "http://localhost:11434",
+        "model": "nomic-embed-text:latest",
+        "notes": "Local embedding model via Ollama."
+    },
+    "openai/gpt-4o": {
+        "type": "cloud",
+        "runner": "openai",
+        "endpoint": "https://api.openai.com/v1",
+        "model": "gpt-4o",
+        "notes": "OpenAI GPT-4o. Requires OPENAI_API_KEY."
+    },
+    "openai/gpt-4o-mini": {
+        "type": "cloud",
+        "runner": "openai",
+        "endpoint": "https://api.openai.com/v1",
+        "model": "gpt-4o-mini",
+        "notes": "OpenAI GPT-4o Mini. Cheaper fallback."
+    },
     "local/llama.cpp": {
         "type": "local",
         "runner": "llama.cpp",
-        "endpoint": "http://localhost:7860",  # text-generation-webui default
+        "endpoint": "http://localhost:7860",
         "notes": "Run text-generation-webui or a llama.cpp HTTP bridge locally"
-    },
-    "local/text-generation-webui": {
-        "type": "local",
-        "runner": "text-generation-webui",
-        "endpoint": "http://localhost:7860"
     },
     "local/default": {
         "type": "local",
-        "runner": "text-generation-webui",
-        "endpoint": "http://localhost:7860"
+        "runner": "ollama",
+        "endpoint": "http://localhost:11434",
+        "model": "llama3.2:latest"
     }
 }
 

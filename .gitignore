@@ -19,9 +19,9 @@ security/.vault-root-token
 security/.secret-registry.json
 security/*.txt
 
-# API keys and tokens
-**/config.json
-**/credentials.json
+# API keys and tokens (root-level configs with secrets only)
+/config.json
+/credentials.json
 
 # Sensitive data
 **/*.pem

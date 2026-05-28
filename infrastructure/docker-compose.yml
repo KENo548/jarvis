@@ -41,6 +41,7 @@ volumes:
   redis-data:
   nginx-certs:
   nginx-data:
+  trivy-cache:
 
 services:
   # ===========================================================================
@@ -375,6 +376,30 @@ services:
     logging: *default-logging
     profiles:
       - mcp-bridge
+      - advanced
+
+  # ===========================================================================
+  # CONTAINER SECURITY — Trivy (vulnerability scanner, replaces Falco)
+  # Scans container images, IaC configs, dependencies, and secrets.
+  # Usage:
+  #   Scan an image:    docker exec jarvis-trivy trivy image chromadb/chroma:latest
+  #   Scan filesystem:  docker exec jarvis-trivy trivy fs /jarvis
+  #   Scan config:      docker exec jarvis-trivy trivy config /jarvis/infrastructure
+  # ===========================================================================
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: jarvis-trivy
+    restart: "no"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - trivy-cache:/root/.cache/trivy
+      - ../:/jarvis:ro
+    networks:
+      - jarvis-net
+    entrypoint: ["sleep", "infinity"]
+    logging: *default-logging
+    profiles:
+      - security
       - advanced
 
   # ===========================================================================

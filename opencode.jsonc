@@ -2,11 +2,11 @@
   "$schema": "https://opencode.ai/config.json",
 
   // ============================================================
-  // User preferences — LOCAL-FIRST, no paid API keys
-  // - Primary: Ollama (local, free, private)
-  // - No Anthropic, no Gemini, no OpenAI
+  // Provider configuration
+  // - Primary: Ollama (local, free, private) + OpenAI
+  // - Disabled: Anthropic (subscription), Google/Gemini (flagged)
   // ============================================================
-  "disabled_providers": ["anthropic", "google", "openai"],
+  "disabled_providers": ["anthropic", "google"],
   "model": "ollama/llama3.2",
   "small_model": "ollama/llama3.2",
 
@@ -68,4 +68,3 @@
     }
   }
 }
-
