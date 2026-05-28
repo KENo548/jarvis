@@ -1,0 +1,7 @@
+Coder Agent test file (Jarvis)
+
+This file was created by an automated coder-agent dry-run in C:\Jarvis.
+Change: add a single small file to verify read/write in the intended folder.
+Do not commit or push without explicit approval.
+
+Timestamp: 2026-05-27

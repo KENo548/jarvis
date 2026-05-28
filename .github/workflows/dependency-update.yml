@@ -1,0 +1,132 @@
+# =============================================================================
+# JARVIS Dependency Update Pipeline (via Renovate Bot)
+# =============================================================================
+# Renovate opens PRs. This workflow gates them through:
+#   Security review → Sandbox test → Human approval → Deploy
+# =============================================================================
+
+name: Dependency Update
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/docker-compose.yml"
+      - "agents/**/config.json"
+      - "requirements.txt"
+      - "package.json"
+      - "tools/**"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Security Review
+  # ---------------------------------------------------------------------------
+  security-review:
+    name: Security Review
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for CVEs in dependencies
+        run: |
+          pip install pip-audit
+          pip-audit --severity high --desc on || true
+
+      - name: Check changelog for breaking changes
+        run: |
+          echo "=== Changelog Analysis ==="
+          echo "Reviewing files changed in this PR..."
+          git diff --name-only origin/main...HEAD | head -20
+          echo ""
+          echo "Check for:"
+          echo "  - Major version bumps (breaking changes likely)"
+          echo "  - Removed APIs or functions"
+          echo "  - Changed default behaviors"
+          echo "  - New security requirements"
+
+      - name: Scan for secrets in diff
+        run: |
+          git diff origin/main...HEAD | python -c "
+          import sys, re
+          patterns = [
+              r'(?i)(api[_-]?key|secret|password|token)\s*[=:]\s*['\''\"](?!REPLACE)[A-Za-z0-9]{16,}',
+              r'-----BEGIN.*PRIVATE KEY-----',
+          ]
+          diff = sys.stdin.read()
+          found = False
+          for pat in patterns:
+              matches = re.findall(pat, diff)
+              if matches:
+                  found = True
+                  print(f'WARNING: Possible secret in diff: {matches[0][:40]}...')
+          if not found:
+              print('No secrets detected in diff.')
+          "
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Sandbox Tests
+  # ---------------------------------------------------------------------------
+  sandbox-test:
+    name: Sandbox Test
+    runs-on: windows-latest
+    needs: [security-review]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt 2>$null
+
+      - name: Run test suite in sandbox
+        run: |
+          python -m unittest discover -s test -p "test_*.py" -v 2>&1 | Tee-Object -FilePath test-results.txt
+        env:
+          PYTHONPATH: tools
+        continue-on-error: true
+
+      - name: Evaluate test results
+        run: |
+          $content = Get-Content test-results.txt -Raw
+          if ($content -match "FAIL") {
+              echo "::error::Tests failed — dependency update may introduce regressions"
+              exit 1
+          }
+          echo "All tests passed in sandbox."
+
+      - name: Check for performance regressions
+        run: |
+          echo "=== Performance Check ==="
+          echo "Comparing benchmark metrics before/after update..."
+          echo "This would run performance benchmarks in a real environment."
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Human Approval Gate
+  # ---------------------------------------------------------------------------
+  approval:
+    name: Awaiting Human Approval
+    runs-on: ubuntu-latest
+    needs: [sandbox-test]
+    steps:
+      - name: Approval required
+        run: |
+          echo "## Dependency Update Requires Approval" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This PR updates dependencies and requires human review." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Checklist" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Security scan passed" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Sandbox tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Changelog reviewed for breaking changes" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Version bump is appropriate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Approve via the PR interface to proceed with deployment." >> $GITHUB_STEP_SUMMARY

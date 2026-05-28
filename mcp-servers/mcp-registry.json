@@ -1,0 +1,197 @@
+{
+    "version":  "2.0.0",
+    "description":  "JARVIS MCP Server Registry — real package names for all installed MCP servers",
+    "mcp_servers":  {
+                        "filesystem-mcp":  {
+                                               "description":  "Read, write, and manage local files.",
+                                               "package":  "@modelcontextprotocol/server-filesystem",
+                                               "install_command":  "npx @modelcontextprotocol/server-filesystem",
+                                               "enabled":  true,
+                                               "phase":  1,
+                                               "security":  {
+                                                                "allowed_paths":  [
+                                                                                      "../agents/",
+                                                                                      "../memory/",
+                                                                                      "../github-repos/",
+                                                                                      "../docs/"
+                                                                                  ],
+                                                                "blocked_paths":  [
+                                                                                      "../security/",
+                                                                                      "../infrastructure/.env",
+                                                                                      "../logs/"
+                                                                                  ],
+                                                                "read_only_paths":  [
+                                                                                        "../security/"
+                                                                                    ]
+                                                            }
+                                           },
+                        "github-mcp":  {
+                                           "description":  "Full GitHub integration: create repos, commit, push, open PRs, manage issues.",
+                                           "package":  "@modelcontextprotocol/server-github",
+                                           "install_command":  "npx @modelcontextprotocol/server-github",
+                                           "enabled":  true,
+                                           "phase":  1,
+                                           "security":  {
+                                                            "allowed_actions":  [
+                                                                                    "read",
+                                                                                    "create_branch",
+                                                                                    "commit",
+                                                                                    "pr"
+                                                                                ],
+                                                            "blocked_actions":  [
+                                                                                    "delete_repo",
+                                                                                    "add_collaborator",
+                                                                                    "modify_webhook"
+                                                                                ],
+                                                            "requires_approval":  [
+                                                                                      "push_to_main",
+                                                                                      "pr_merge",
+                                                                                      "release"
+                                                                                  ]
+                                                        }
+                                       },
+                        "memory-mcp":  {
+                                           "description":  "Persistent key-value memory across sessions.",
+                                           "package":  "@modelcontextprotocol/server-memory",
+                                           "install_command":  "npx @modelcontextprotocol/server-memory",
+                                           "enabled":  true,
+                                           "phase":  1,
+                                           "security":  {
+                                                            "storage_path":  "../memory/sqlite/memory.db",
+                                                            "max_entries":  10000,
+                                                            "auto_expire_days":  90
+                                                        }
+                                       },
+                        "browser-mcp":  {
+                                            "description":  "Control a real web browser — research, scraping, form filling, web testing.",
+                                            "package":  "@playwright/mcp",
+                                            "install_command":  "npx @playwright/mcp",
+                                            "enabled":  true,
+                                            "phase":  2,
+                                            "security":  {
+                                                             "headless":  true,
+                                                             "blocked_domains":  [
+                                                                                     "localhost:*",
+                                                                                     "127.0.0.1:*",
+                                                                                     "192.168.*"
+                                                                                 ],
+                                                             "max_pages":  5,
+                                                             "screenshot_allowed":  true
+                                                         }
+                                        },
+                        "search-mcp":  {
+                                           "description":  "Web search via MCP. Requires Brave Search API key (free tier available at https://brave.com/search/api/). Falls back to local SearXNG when disabled.",
+                                           "package":  "@modelcontextprotocol/server-brave-search",
+                                           "install_command":  "npx @modelcontextprotocol/server-brave-search",
+                                           "enabled":  false,
+                                           "phase":  2,
+                                           "security":  {
+                                                            "brave_api_key_env":  "BRAVE_API_KEY",
+                                                            "max_results":  10,
+                                                            "safe_search":  true
+                                                        }
+                                       },
+                        "fetch-mcp":  {
+                                          "description":  "Make HTTP requests to any API.",
+                                          "package":  "mcp-fetch-server",
+                                          "install_command":  "npx mcp-fetch-server",
+                                          "enabled":  true,
+                                          "phase":  1,
+                                          "security":  {
+                                                           "allowed_domains":  [
+                                                                                   "*"
+                                                                               ],
+                                                           "blocked_domains":  [
+                                                                                   "localhost:*",
+                                                                                   "127.0.0.1:*",
+                                                                                   "192.168.*",
+                                                                                   "10.*"
+                                                                               ],
+                                                           "timeout_seconds":  30,
+                                                           "max_response_size_mb":  5
+                                                       }
+                                      },
+                        "sqlite-mcp":  {
+                                           "description":  "Read and write SQLite databases.",
+                                           "package":  "mcp-sqlite",
+                                           "install_command":  "npx mcp-sqlite",
+                                           "enabled":  true,
+                                           "phase":  1,
+                                           "security":  {
+                                                            "allowed_databases":  [
+                                                                                      "../memory/sqlite/jarvis.db",
+                                                                                      "../memory/sqlite/memory.db"
+                                                                                  ],
+                                                            "read_only_databases":  [
+
+                                                                                    ],
+                                                            "blocked_operations":  [
+                                                                                       "DROP",
+                                                                                       "TRUNCATE",
+                                                                                       "ALTER"
+                                                                                   ]
+                                                        }
+                                       },
+                        "sequential-thinking-mcp":  {
+                                                        "description":  "Chain-of-thought reasoning for complex planning tasks.",
+                                                        "package":  "@modelcontextprotocol/server-sequential-thinking",
+                                                        "install_command":  "npx @modelcontextprotocol/server-sequential-thinking",
+                                                        "enabled":  true,
+                                                        "phase":  1,
+                                                        "security":  {
+
+                                                                     }
+                                                    },
+                        "code-sandbox-mcp":  {
+                                             "description":  "Run code in an isolated sandbox. Safe code execution with no risk to your main system.",
+                                             "package":  "code-sandbox-mcp",
+                                             "install_command":  "npx code-sandbox-mcp",
+                                             "enabled":  true,
+                                             "phase":  3,
+                                             "security":  {
+                                                              "allowed_languages":  [
+                                                                                       "python",
+                                                                                       "javascript",
+                                                                                       "typescript"
+                                                                                   ],
+                                                              "timeout_seconds":  30,
+                                                              "requires_approval":  true
+                                                          }
+                                         },
+                        "docker-mcp":  {
+                                           "description":  "Manage Docker containers — start, stop, inspect environments safely.",
+                                           "package":  "@hypnosis/docker-mcp-server",
+                                           "install_command":  "npx @hypnosis/docker-mcp-server",
+                                           "enabled":  false,
+                                           "phase":  3,
+                                           "security":  {
+                                                            "allowed_networks":  [
+                                                                                     "jarvis-net"
+                                                                                 ],
+                                                            "blocked_operations":  [
+                                                                                       "rm",
+                                                                                       "kill",
+                                                                                       "exec_root"
+                                                                                   ],
+                                                            "requires_approval":  [
+                                                                                      "container_create",
+                                                                                      "container_stop",
+                                                                                      "image_pull"
+                                                                                  ]
+                                                        }
+                                       }
+                                        ,
+                            "neo4j-mcp": {
+                                           "description": "Neo4j graph database adapter MCP.",
+                                           "package": "@modelcontextprotocol/server-neo4j",
+                                           "install_command": "npx @modelcontextprotocol/server-neo4j",
+                                           "enabled": false,
+                                           "phase": 4,
+                                           "security": {
+                                               "requires_auth_file": "./secrets/neo4j-auth.txt",
+                                               "allowed_queries": ["MATCH","CREATE","MERGE"],
+                                               "blocked_queries": ["CALL apoc", "apoc.system"]
+                                           }
+                            }
+                    }
+}

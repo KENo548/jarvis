@@ -1,0 +1,58 @@
+title = "JARVIS gitleaks configuration"
+
+[allowlist]
+description = "Known-safe paths"
+paths = [
+    "(node_modules)",
+    "__pycache__",
+    ".git",
+    ".env.example",
+]
+
+[[rules]]
+id = "google-api-key"
+description = "Google API Key"
+regex = '''AIza[0-9A-Za-z\-_]{35}'''
+tags = ["key", "Google", "API"]
+
+[[rules]]
+id = "nvidia-api-key"
+description = "NVIDIA API Key"
+regex = '''nvapi-[0-9a-zA-Z\-_]{30,}'''
+tags = ["key", "NVIDIA", "API"]
+
+[[rules]]
+id = "github-pat"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[0-9a-zA-Z]{36,}'''
+tags = ["key", "GitHub"]
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API Key"
+regex = '''sk-[a-zA-Z0-9]{20,}'''
+tags = ["key", "OpenAI"]
+
+[[rules]]
+id = "slack-token"
+description = "Slack Token"
+regex = '''xox[baprs]-[0-9a-zA-Z\-]{10,}'''
+tags = ["key", "Slack"]
+
+[[rules]]
+id = "stripe-live-key"
+description = "Stripe Live API Key"
+regex = '''(?:sk|pk)_live_[0-9a-zA-Z]+'''
+tags = ["key", "Stripe"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key assignment"
+regex = '''(?:api[-_]?key|apikey|secret[-_]?(?:key|token))["']?\s*[:=]\s*["'][a-zA-Z0-9\-_]{16,}["']'''
+tags = ["key", "generic"]

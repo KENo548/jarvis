@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-05-27",
+  "user": {
+    "coding_background": "none",
+    "communication_style": "beginner_friendly_detailed_steps",
+    "explain_like": "plain_language_with_exact_ui_steps_windows"
+  },
+  "models": {
+    "primary_provider": "local",
+    "primary_model": "llama.cpp/local-model",
+    "fallback_provider": "local",
+    "fallback_when": ["rate_limit", "429", "quota", "resource_exhausted"],
+    "disabled_providers": ["anthropic", "google", "openai"],
+    "do_not_use_paid_claude": true,
+    "notes": "Use local runners only; keep this file aligned with the local model mapper."
+  },
+  "security": {
+    "human_approval_for": ["git_push", "file_delete", "deploy", "dependency_install", "shell_mutations"]
+  }
+}

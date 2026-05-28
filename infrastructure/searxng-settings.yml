@@ -1,0 +1,27 @@
+# =============================================================================
+# JARVIS SearXNG Settings Overlay
+# =============================================================================
+# Enable JSON API format so the research gateway can consume results programmatically.
+# This file is mounted into the container at /etc/searxng/settings.yml.
+# =============================================================================
+
+use_default_settings: true
+
+search:
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: ${SEARXNG_SECRET}
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+  image_proxy: false
+  # Disable rate-limiting for local development
+  method: GET
+
+botdetection:
+  ip_limit: 0
+  # Disable bot detection for local-first deployment
+  limiter: false

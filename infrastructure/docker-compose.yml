@@ -1,0 +1,354 @@
+# =============================================================================
+# JARVIS Infrastructure — Docker Compose
+# Master orchestrator for all services in the ecosystem.
+# Phase 1: Chroma + SQLite + n8n
+# Phase 2: Add SearXNG, Grafana stack
+# Phase 3: Add Vault, Temporal, Falco
+# Phase 4: Add Neo4j, Whisper
+# =============================================================================
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+networks:
+  jarvis-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  chroma-data:
+  sqlite-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  vault-data:
+  neo4j-data:
+  n8n-data:
+  searxng-data:
+  temporal-data:
+  temporal-pg-data:
+
+services:
+  # ===========================================================================
+  # VECTOR DATABASE — Semantic memory for agents
+  # ===========================================================================
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: jarvis-chroma
+    restart: unless-stopped
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - jarvis-net
+    ports:
+      - "8000:8000"
+    logging: *default-logging
+    healthcheck:
+      # Chroma image does not ship python/curl; use the bundled CLI as a compatibility probe.
+      test: ["CMD-SHELL", "chroma --version >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Security: no public exposure. Agents connect via internal network.
+
+  # ===========================================================================
+  # WORKFLOW AUTOMATION — n8n (visual drag-and-drop pipelines)
+  # ===========================================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: jarvis-n8n
+    restart: unless-stopped
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ../workflows:/backup-workflows
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_METRICS=true
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      - GENERIC_TIMEZONE=UTC
+    networks:
+      - jarvis-net
+    ports:
+      - "5678:5678"
+    logging: *default-logging
+    # Security: behind Tailscale VPN, not exposed to internet directly.
+
+  # ===========================================================================
+  # MONITORING — Prometheus (metrics collection)
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: jarvis-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    networks:
+      - jarvis-net
+    ports:
+      - "9090:9090"
+    logging: *default-logging
+
+  # ===========================================================================
+  # MONITORING — Grafana (dashboards + visualization)
+  # ===========================================================================
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: jarvis-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana-admin-password
+      - GF_INSTALL_PLUGINS=
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    networks:
+      - jarvis-net
+    ports:
+      - "3000:3000"
+    logging: *default-logging
+    secrets:
+      - grafana-admin-password
+
+  # ===========================================================================
+  # LOG AGGREGATION — Loki (centralized logs)
+  # ===========================================================================
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: jarvis-loki
+    restart: unless-stopped
+    volumes:
+      - loki-data:/loki
+      - ./monitoring/loki-config.yml:/etc/loki/config.yml
+    command:
+      - "-config.file=/etc/loki/config.yml"
+    networks:
+      - jarvis-net
+    ports:
+      - "3100:3100"
+    logging: *default-logging
+
+  # ===========================================================================
+  # SECRETS MANAGEMENT — HashiCorp Vault (Phase 3)
+  # ===========================================================================
+  vault:
+    image: hashicorp/vault:1.19.0
+    container_name: jarvis-vault
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - "vault server -config=/vault/config/vault-config.hcl"
+    volumes:
+      - vault-data:/vault/file
+      - ../security/vault-config.hcl:/vault/config/vault-config.hcl
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - jarvis-net
+    ports:
+      - "18201:8201"
+    logging: *default-logging
+    # Security: Vault is initialized with seal + unseal keys stored offline.
+    # The UI is only accessible via Tailscale VPN.
+
+  # ===========================================================================
+  # PRIVATE WEB SEARCH — SearXNG (Phase 2+)
+  # ===========================================================================
+  searxng:
+    image: searxng/searxng:latest
+    container_name: jarvis-searxng
+    restart: unless-stopped
+    volumes:
+      - searxng-data:/etc/searxng:rw
+      - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888
+      - SEARXNG_SECRET=jarvis-local-dev-secret-key
+    networks:
+      - jarvis-net
+    ports:
+      - "8888:8080"
+    logging: *default-logging
+
+  # ===========================================================================
+  # KNOWLEDGE GRAPH — Neo4j (Phase 4)
+  # ===========================================================================
+  neo4j:
+    image: neo4j:5.26.0-community
+    container_name: jarvis-neo4j
+    restart: unless-stopped
+    volumes:
+      - neo4j-data:/data
+    environment:
+      - NEO4J_AUTH=neo4j/jarvis-neo4j
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    networks:
+      - jarvis-net
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    logging: *default-logging
+    secrets:
+      - neo4j-auth
+    profiles:
+      - advanced
+
+  # ===========================================================================
+  # WORKFLOW ORCHESTRATION — Temporal (Phase 3)
+  # ===========================================================================
+  temporal:
+    image: temporalio/auto-setup:1.28.4
+    container_name: jarvis-temporal
+    restart: unless-stopped
+    depends_on:
+      temporal-postgresql:
+        condition: service_healthy
+    volumes:
+      - temporal-data:/etc/temporal/data
+    environment:
+      - DB=postgres12_pgx
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/docker.yaml
+      - SKIP_SCHEMA_SETUP=false
+    networks:
+      - jarvis-net
+    ports:
+      - "7233:7233"
+    logging: *default-logging
+    profiles:
+      - temporal
+      - advanced
+
+  temporal-postgresql:
+    image: postgres:16-alpine
+    container_name: jarvis-temporal-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=temporal
+      - POSTGRES_PASSWORD=temporal
+      - POSTGRES_DB=temporal
+    volumes:
+      - temporal-pg-data:/var/lib/postgresql/data
+    networks:
+      - jarvis-net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - temporal
+      - advanced
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    container_name: jarvis-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      temporal:
+        condition: service_started
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8233
+    networks:
+      - jarvis-net
+    ports:
+      - "8233:8080"
+    logging: *default-logging
+    profiles:
+      - temporal
+      - advanced
+
+  # ===========================================================================
+  # RUNTIME SECURITY — Falco (Phase 3, requires privileged access)
+  # ===========================================================================
+  falco:
+    image: falcosecurity/falco:0.40.0
+    container_name: jarvis-falco
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+      - /etc:/host/etc:ro
+      - ./falco-rules:/etc/falco/rules.d:ro
+    environment:
+      - FALCO_BPF_PROBE=
+      - FALCO_GRPC_ENABLED=true
+      - FALCO_GRPC_LISTEN_PORT=5060
+      - FALCO_RULES_FILE=/etc/falco/falco.yaml
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+      - SYS_BOOT
+      - IPC_LOCK
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      - jarvis-net
+    ports:
+      - "5060:5060"
+    logging: *default-logging
+    privileged: true
+    profiles:
+      - falco
+      - advanced
+      - security
+
+  # ===========================================================================
+  # MCP HTTP Bridge — wraps stdio MCP servers as HTTP endpoints
+  # ===========================================================================
+  mcp-bridge:
+    image: node:22-slim
+    container_name: jarvis-mcp-bridge
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./mcp-bridge-server.mjs:/app/mcp-bridge-server.mjs:ro
+      - ../mcp-servers:/app/mcp-servers:ro
+      - ../package.json:/app/package.json:ro
+    command: >
+      sh -c "
+        node mcp-bridge-server.mjs 8099
+      "
+    networks:
+      - jarvis-net
+    ports:
+      - "8099:8099"
+    logging: *default-logging
+    profiles:
+      - mcp-bridge
+      - advanced
+
+secrets:
+  grafana-admin-password:
+    file: ./secrets/grafana-admin-password.txt
+  neo4j-auth:
+    file: ./secrets/neo4j-auth.txt

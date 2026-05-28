@@ -1,0 +1,43 @@
+# JARVIS Prometheus Configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Alertmanager (future use)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Rule files (future alert rules)
+rule_files: []
+
+# What to scrape
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "chroma"
+    metrics_path: /api/v1/metrics
+    static_configs:
+      - targets: ["chroma:8000"]
+    # Chroma exposes basic health metrics
+
+  - job_name: "n8n"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["n8n:5678"]
+    # n8n exposes workflow execution metrics
+
+  - job_name: "docker"
+    static_configs:
+      - targets: ["host.docker.internal:9323"]
+    # Docker daemon metrics — requires docker daemon config
+
+  - job_name: "jarvis"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
+    # Local metrics server backed by jarvis_metrics.py

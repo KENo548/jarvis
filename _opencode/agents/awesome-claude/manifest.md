@@ -1,0 +1,170 @@
+﻿# Awesome Claude Subagents to OpenCode Agents Manifest
+
+Generated: 2026-05-26 16:46:41
+Source: C:\Users\Admin\Documents\agency-agents-main\awesome-local/llama.cpp
+Destination: C:\Users\Admin\Documents\agency-agents-main\jarvis\.opencode\agents\awesome-claude
+
+## Summary
+
+- Total files scanned: 154
+- Converted agents: 154
+- Errors: 0
+
+## Converted Agents
+
+| # | Agent Name | Status |
+|---|------------|--------|
+| 1 | api-designer | OK |
+| 2 | backend-developer | OK |
+| 3 | design-bridge | OK |
+| 4 | electron-pro | OK |
+| 5 | frontend-developer | OK |
+| 6 | fullstack-developer | OK |
+| 7 | graphql-architect | OK |
+| 8 | microservices-architect | OK |
+| 9 | mobile-developer | OK |
+| 10 | ui-designer | OK |
+| 11 | websocket-engineer | OK |
+| 12 | angular-architect | OK |
+| 13 | cpp-pro | OK |
+| 14 | csharp-developer | OK |
+| 15 | django-developer | OK |
+| 16 | dotnet-core-expert | OK |
+| 17 | dotnet-framework-4.8-expert | OK |
+| 18 | elixir-expert | OK |
+| 19 | expo-react-native-expert | OK |
+| 20 | fastapi-developer | OK |
+| 21 | flutter-expert | OK |
+| 22 | golang-pro | OK |
+| 23 | java-architect | OK |
+| 24 | javascript-pro | OK |
+| 25 | kotlin-specialist | OK |
+| 26 | laravel-specialist | OK |
+| 27 | nextjs-developer | OK |
+| 28 | node-specialist | OK |
+| 29 | php-pro | OK |
+| 30 | powershell-5.1-expert | OK |
+| 31 | powershell-7-expert | OK |
+| 32 | python-pro | OK |
+| 33 | rails-expert | OK |
+| 34 | react-specialist | OK |
+| 35 | rust-engineer | OK |
+| 36 | spring-boot-engineer | OK |
+| 37 | sql-pro | OK |
+| 38 | swift-expert | OK |
+| 39 | symfony-specialist | OK |
+| 40 | typescript-pro | OK |
+| 41 | vue-expert | OK |
+| 42 | azure-infra-engineer | OK |
+| 43 | cloud-architect | OK |
+| 44 | database-administrator | OK |
+| 45 | deployment-engineer | OK |
+| 46 | devops-engineer | OK |
+| 47 | devops-incident-responder | OK |
+| 48 | docker-expert | OK |
+| 49 | incident-responder | OK |
+| 50 | kubernetes-specialist | OK |
+| 51 | network-engineer | OK |
+| 52 | platform-engineer | OK |
+| 53 | security-engineer | OK |
+| 54 | sre-engineer | OK |
+| 55 | terraform-engineer | OK |
+| 56 | terragrunt-expert | OK |
+| 57 | windows-infra-admin | OK |
+| 58 | accessibility-tester | OK |
+| 59 | ad-security-reviewer | OK |
+| 60 | ai-writing-auditor | OK |
+| 61 | architect-reviewer | OK |
+| 62 | chaos-engineer | OK |
+| 63 | code-reviewer | OK |
+| 64 | compliance-auditor | OK |
+| 65 | debugger | OK |
+| 66 | error-detective | OK |
+| 67 | gdpr-ccpa-compliance | OK |
+| 68 | penetration-tester | OK |
+| 69 | performance-engineer | OK |
+| 70 | powershell-security-hardening | OK |
+| 71 | qa-expert | OK |
+| 72 | security-auditor | OK |
+| 73 | test-automator | OK |
+| 74 | ui-ux-tester | OK |
+| 75 | ai-engineer | OK |
+| 76 | data-analyst | OK |
+| 77 | data-engineer | OK |
+| 78 | data-scientist | OK |
+| 79 | database-optimizer | OK |
+| 80 | llm-architect | OK |
+| 81 | machine-learning-engineer | OK |
+| 82 | ml-engineer | OK |
+| 83 | mlops-engineer | OK |
+| 84 | nlp-engineer | OK |
+| 85 | postgres-pro | OK |
+| 86 | prompt-engineer | OK |
+| 87 | reinforcement-learning-engineer | OK |
+| 88 | build-engineer | OK |
+| 89 | cli-developer | OK |
+| 90 | dependency-manager | OK |
+| 91 | documentation-engineer | OK |
+| 92 | dx-optimizer | OK |
+| 93 | git-workflow-manager | OK |
+| 94 | legacy-modernizer | OK |
+| 95 | mcp-developer | OK |
+| 96 | powershell-module-architect | OK |
+| 97 | powershell-ui-architect | OK |
+| 98 | readme-generator | OK |
+| 99 | refactoring-specialist | OK |
+| 100 | slack-expert | OK |
+| 101 | tooling-engineer | OK |
+| 102 | visual-asset-generator | OK |
+| 103 | api-documenter | OK |
+| 104 | blockchain-developer | OK |
+| 105 | embedded-systems | OK |
+| 106 | fintech-engineer | OK |
+| 107 | game-developer | OK |
+| 108 | healthcare-admin | OK |
+| 109 | hipaa-compliance | OK |
+| 110 | iot-engineer | OK |
+| 111 | m365-admin | OK |
+| 112 | mobile-app-developer | OK |
+| 113 | payment-integration | OK |
+| 114 | quant-analyst | OK |
+| 115 | risk-manager | OK |
+| 116 | seo-specialist | OK |
+| 117 | assumption-mapping | OK |
+| 118 | backlog-grooming | OK |
+| 119 | business-analyst | OK |
+| 120 | content-marketer | OK |
+| 121 | content-quality-editor | OK |
+| 122 | customer-success-manager | OK |
+| 123 | growth-loops | OK |
+| 124 | legal-advisor | OK |
+| 125 | license-engineer | OK |
+| 126 | product-manager | OK |
+| 127 | project-manager | OK |
+| 128 | sales-engineer | OK |
+| 129 | scrum-master | OK |
+| 130 | technical-writer | OK |
+| 131 | ux-researcher | OK |
+| 132 | wordpress-master | OK |
+| 133 | agent-installer | OK |
+| 134 | agent-organizer | OK |
+| 135 | codebase-orchestrator | OK |
+| 136 | context-manager | OK |
+| 137 | error-coordinator | OK |
+| 138 | it-ops-orchestrator | OK |
+| 139 | knowledge-synthesizer | OK |
+| 140 | multi-agent-coordinator | OK |
+| 141 | performance-monitor | OK |
+| 142 | task-distributor | OK |
+| 143 | workflow-orchestrator | OK |
+| 144 | ab-test-analysis | OK |
+| 145 | cohort-analysis | OK |
+| 146 | competitive-analyst | OK |
+| 147 | data-researcher | OK |
+| 148 | first-principles-thinking | OK |
+| 149 | market-researcher | OK |
+| 150 | project-idea-validator | OK |
+| 151 | research-analyst | OK |
+| 152 | scientific-literature-researcher | OK |
+| 153 | search-specialist | OK |
+| 154 | trend-analyst | OK |

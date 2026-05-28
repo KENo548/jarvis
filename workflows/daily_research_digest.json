@@ -1,0 +1,95 @@
+{
+  "name": "Daily Research Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "cron-digest",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8080/research/search?query=jarvis",
+        "method": "GET",
+        "responseFormat": "json"
+      },
+      "id": "fetch-digest",
+      "name": "Fetch Research Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst payload = items.map(item => item.json);\nreturn [{ json: { generatedAt: new Date().toISOString(), source: 'jarvis', notes: payload } }];"
+      },
+      "id": "summarize-digest",
+      "name": "Summarize Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "content": "={{ JSON.stringify($json, null, 2) }}",
+        "operation": "append"
+      },
+      "id": "write-digest",
+      "name": "Write Digest",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Fetch Research Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Research Notes": {
+      "main": [
+        [
+          {
+            "node": "Summarize Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Digest": {
+      "main": [
+        [
+          {
+            "node": "Write Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "1"
+}

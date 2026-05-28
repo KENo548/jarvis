@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "description": "JARVIS Immutable Audit Log Configuration",
+  "log_path": "../logs/audit.log",
+  "immutable": true,
+  "format": {
+    "timestamp": "ISO8601",
+    "fields": [
+      "timestamp",
+      "agent_id",
+      "action_type",
+      "action_detail",
+      "inputs_hash",
+      "outputs_hash",
+      "approved_by",
+      "approval_type",
+      "status",
+      "duration_ms",
+      "risk_level"
+    ]
+  },
+  "action_types": [
+    "file_read",
+    "file_write",
+    "file_delete",
+    "git_commit",
+    "git_push",
+    "git_pr",
+    "web_search",
+    "web_fetch",
+    "api_call",
+    "code_execution",
+    "sandbox_run",
+    "docker_operation",
+    "secret_access",
+    "config_change",
+    "dependency_update",
+    "model_inference",
+    "agent_spawn",
+    "agent_kill",
+    "approval_granted",
+    "approval_denied",
+    "kill_switch_triggered"
+  ],
+  "risk_levels": {
+    "low": ["file_read", "web_search", "model_inference"],
+    "medium": ["file_write", "api_call", "web_fetch"],
+    "high": ["file_delete", "git_push", "code_execution", "sandbox_run", "docker_operation", "secret_access"],
+    "critical": ["git_pr", "dependency_update", "config_change", "agent_kill", "kill_switch_triggered"]
+  },
+  "retention": {
+    "online_days": 90,
+    "archive_days": 365,
+    "encryption": "AES-256-GCM"
+  },
+  "alert_rules": {
+    "critical_action_without_approval": "alert",
+    "high_action_from_new_agent": "alert",
+    "consecutive_denied_access": 5,
+    "audit_log_tamper_detected": "immediate_shutdown"
+  }
+}

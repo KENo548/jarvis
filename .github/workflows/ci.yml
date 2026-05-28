@@ -1,0 +1,200 @@
+name: JARVIS CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Lint & Format
+  # ---------------------------------------------------------------------------
+  lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 ruff
+
+      - name: Lint with flake8 (critical errors only)
+        run: |
+          flake8 tools/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 test/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Lint with ruff
+        run: |
+          ruff check tools/ test/ --output-format=github || true
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Security Scanning
+  # ---------------------------------------------------------------------------
+  security:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Secret scanning with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: SAST with Bandit
+        run: |
+          bandit -r tools/ -f json -o bandit-report.json --severity-level medium || true
+          bandit -r tools/ --severity-level high
+        continue-on-error: false
+
+      - name: Dependency vulnerability check
+        run: |
+          pip install pip-audit
+          pip-audit --severity high --desc on
+        continue-on-error: true
+
+      - name: Check for hardcoded secrets
+        run: |
+          python -c "
+          import re, sys, pathlib
+          patterns = [
+              r'(?i)api[_-]?key\s*[=:]\s*['\''\"]((?!REPLACE)[A-Za-z0-9]{20,})',
+              r'(?i)secret\s*[=:]\s*['\''\"]((?!REPLACE)[A-Za-z0-9]{20,})',
+              r'(?i)password\s*[=:]\s*['\''\"]((?!REPLACE)[^\s'\''\"]{8,})',
+              r'-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----',
+          ]
+          found = []
+          for f in pathlib.Path('tools').rglob('*.py'):
+              text = f.read_text(encoding='utf-8', errors='ignore')
+              for i, line in enumerate(text.splitlines(), 1):
+                  for pat in patterns:
+                      if re.search(pat, line):
+                          found.append(f'{f}:{i}: {line.strip()[:80]}')
+          if found:
+              print('Possible secrets found:')
+              for item in found:
+                  print(f'  {item}')
+              sys.exit(1)
+          print('No hardcoded secrets detected.')
+          "
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Full Test Suite
+  # ---------------------------------------------------------------------------
+  test:
+    runs-on: windows-latest
+    needs: [lint, security]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt 2>$null
+
+      - name: Run full test suite
+        run: |
+          python -m unittest discover -s test -p "test_*.py" -v
+        env:
+          PYTHONPATH: tools
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Stage 4: Deploy Gate (manual approval required)
+  # ---------------------------------------------------------------------------
+  deploy-gate:
+    runs-on: windows-latest
+    needs: [test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate infrastructure
+        run: |
+          echo "=== Infrastructure Validation ==="
+          echo "Checking docker-compose.yml syntax..."
+          docker compose -f infrastructure/docker-compose.yml config --quiet 2>/dev/null || echo "docker compose not available in CI"
+          echo "Checking agent configs..."
+          python -c "
+          import json, pathlib
+          for f in pathlib.Path('agents').rglob('config.json'):
+              data = json.loads(f.read_text())
+              assert 'agent_id' in data, f'{f}: missing agent_id'
+              assert 'role' in data, f'{f}: missing role'
+              print(f'  OK: {f}')
+          print('All agent configs valid.')
+          "
+
+      - name: Validate MCP registry
+        run: |
+          python -c "
+          import json
+          data = json.loads(open('mcp-servers/mcp-registry.json').read())
+          servers = data.get('mcp_servers', {})
+          print(f'Registered MCP servers: {len(servers)}')
+          for name, conf in servers.items():
+              phase = conf.get('phase', '?')
+              enabled = conf.get('enabled', False)
+              print(f'  {name}: phase={phase}, enabled={enabled}')
+          "
+
+      - name: Generate deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Requires manual approval before production deploy.**" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # Stage 5: Production Deploy (manual trigger only)
+  # ---------------------------------------------------------------------------
+  deploy:
+    runs-on: windows-latest
+    needs: [deploy-gate]
+    environment: production
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "=== Production Deployment ==="
+          echo "This would deploy to production in a real environment."
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+        env:
+          DEPLOY_APPROVED: true

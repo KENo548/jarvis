@@ -1,0 +1,170 @@
+{
+  // ==========================================================================
+  // J.A.R.V.I.S. — Super Engineer AI Dev Work Ecosystem
+  // Master OpenCode Configuration
+  //
+  // This file connects everything:
+  //   • 191 specialized AI agents (from wshobson/agents marketplace)
+  //   • 102 slash commands
+  //   • 155 executable skills
+  //   • 10 MCP servers (tools your AI can use)
+  //   • JARVIS security layer (approval queue, kill switch, audit log)
+  //
+  // Created: May 2026
+  // ==========================================================================
+
+  "$schema": "https://opencode.ai/config.json",
+
+  // ==========================================================================
+  // MODELS — User preference: Gemini primary, NVIDIA fallback, no paid Claude
+  // Keys: /connect in OpenCode, or infrastructure/.env (GOOGLE_API_KEY, NVIDIA_API_KEY)
+  // Full guide: docs/USER_PREFERENCES.md
+  // ==========================================================================
+  "disabled_providers": ["anthropic"],
+  "model": "google/gemini-2.5-flash",
+  "small_model": "google/gemini-2.5-flash",
+  "provider": {
+    "google": {
+      "models": {
+        "gemini-2.5-flash": { "name": "Gemini 2.5 Flash (primary, free tier)" },
+        "gemini-2.5-pro": { "name": "Gemini 2.5 Pro (heavier tasks)" }
+      }
+    },
+    "nvidia": {
+      "models": {
+        "meta/llama-3.1-8b-instruct": { "name": "NVIDIA fallback (when Gemini rate limited)" }
+      }
+    }
+  },
+
+  // ==========================================================================
+  // MCP SERVERS — Your AI's "hands"
+  // These let your AI agents interact with files, GitHub, databases, web, etc.
+  // All 10 verified and installed from npm.
+  // ==========================================================================
+  "mcpServers": {
+    // === CORE TOOLS ===
+
+    "filesystem": {
+      "description": "Read/write files on your computer. Your AI needs this for coding.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./github-repos"],
+      "disabled": false,
+      "autoApprove": ["read", "search"]
+    },
+
+    "github": {
+      "description": "Connect to GitHub — create repos, commit, push, PRs, issues.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    "memory": {
+      "description": "AI remembers what it did across sessions. Like a brain for your agents.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory", "--db-path", "./memory/sqlite/memory.db"],
+      "disabled": false,
+      "autoApprove": ["store", "read"]
+    },
+
+    "sqlite": {
+      "description": "Structured database for tasks, approvals, history, state tracking.",
+      "command": "npx",
+      "args": ["-y", "mcp-sqlite", "./memory/sqlite/jarvis.db"],
+      "disabled": false,
+      "autoApprove": ["read-query"]
+    },
+
+    "postgres": {
+      "description": "Connect to PostgreSQL databases for advanced data work.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    // === WEB RESEARCH ===
+
+    "fetch": {
+      "description": "Fetch web pages and API data. Lets your AI read the internet.",
+      "command": "npx",
+      "args": ["-y", "mcp-fetch-server"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    "browser": {
+      "description": "Full web browser control — research, scrape, test websites.",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    "brave-search": {
+      "description": "Web search — lets your AI search the internet for answers.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    // === POWER TOOLS ===
+
+    "docker": {
+      "description": "Manage Docker containers — run isolated environments safely.",
+      "command": "npx",
+      "args": ["-y", "@hypnosis/docker-mcp-server"],
+      "disabled": false,
+      "autoApprove": []
+    },
+
+    "sequential-thinking": {
+      "description": "Step-by-step reasoning — helps AI think through complex problems.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "disabled": false,
+      "autoApprove": ["think"]
+    }
+  },
+
+  // ==========================================================================
+  // AGENT DIRECTORY — Where to find your 191 specialists
+  // ==========================================================================
+  "agentDirectory": ".opencode/agents",
+
+  // ==========================================================================
+  // SKILL DIRECTORY — 155 agents-main skills + 45 GStack skills + 2 Dexter skills
+  // ==========================================================================
+  "skillDirectory": [".opencode/skills", "gstack-skills", "dexter-skills"],
+
+  // ==========================================================================
+  // SYSTEM PROMPT — How your AI thinks and behaves
+  // ==========================================================================
+  "systemPrompt": "You are J.A.R.V.I.S. — a Super Engineer AI. You have 345 specialized agent personalities (.opencode/agents/), 155 skills (.opencode/skills/), 45 GStack workflow skills (gstack-skills/), and 2 Dexter finance skills (dexter-skills/) at your disposal.\n\nUSER PREFERENCES (mandatory — read docs/USER_PREFERENCES.md):\n- The user has NO coding background. Explain in plain language with detailed step-by-step Windows instructions.\n- Use Google Gemini as the primary model. Do NOT use Anthropic Claude unless the user explicitly asks.\n- When Gemini rate-limits (429/quota), tell the user to run /models and switch to NVIDIA, then retry.\n\nMISSION: Design, code, research, plan, build, and troubleshoot like a world-class engineering team.\n\nRULES:\n1. Check .opencode/agents/ for the right specialist agent before starting any task\n2. Use the JARVIS tools in tools/ for security: approval-queue.py, kill-switch.ps1\n3. NEVER write API keys, passwords, or secrets into code\n4. Always ask for human approval before: git push, code execution, file deletion, deployments\n5. Log all significant actions to jarvis.db via the sqlite MCP\n6. If uncertain, consult the closest specialist agent first\n7. Read docs/ for system documentation\n8. Check security/ for policies before making security decisions",
+
+  // ==========================================================================
+  // MODE — 'plan' lets you review before executing
+  // ==========================================================================
+  "mode": "plan",
+
+  // ==========================================================================
+  // AGENT SETTINGS
+  // ==========================================================================
+  "agent": {
+    "maxRequestsPerTask": 100,
+    "parallelToolLimit": 5
+  },
+
+  // ==========================================================================
+  // ACTIONS YOU DON'T NEED TO APPROVE (safe operations)
+  // ==========================================================================
+  "bypassApprovalFor": [
+    "*.md",
+    "memory/obsidian-vault/",
+    "docs/",
+    "*.txt"
+  ]
+}

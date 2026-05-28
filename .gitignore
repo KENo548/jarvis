@@ -8,9 +8,12 @@
 *.env
 infrastructure/secrets/*
 !infrastructure/secrets/.gitkeep
+secrets/*
+!secrets/.gitkeep
 
 # Specific sensitive files
 security/vault-keys.txt
+security/*.txt
 
 # API keys and tokens
 **/config.json
@@ -39,6 +42,12 @@ logs/*
 # Docker data volumes
 data/
 
+# Local editor/runtime caches
+.cursor/
+.playwright-mcp/
+node_modules.off/
+--help
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -56,6 +65,7 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+.venv-1/
 venv/
 *.egg-info/
 

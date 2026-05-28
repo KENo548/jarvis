@@ -1,0 +1,15 @@
+chromadb
+sentence-transformers
+playwright
+nomic
+langgraph
+sqlite-utils
+sqlalchemy
+requests
+beautifulsoup4
+python-dotenv
+neo4j
+flask
+transformers
+torch
+sentencepiece
