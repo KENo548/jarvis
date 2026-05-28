@@ -11,22 +11,102 @@ Phase 3 ─► Multi-Agent Orchestration (Weeks 9-14)
 Phase 4 ─► Advanced Capabilities (Weeks 15-24)
 ```
 
+The ecosystem is built on a **Seven-Layer Architecture**: Infrastructure → AI Models → Memory & Knowledge → Tool & MCP Bus → Agent Fleet → Orchestration → Interface.
+
+---
+
+## The Five Pillars
+
+| Pillar | What It Means |
+|--------|---------------|
+| **Modularity** | Each component is independent — swap, upgrade, or remove it without breaking everything else. |
+| **Human Oversight** | The system proposes, you approve. No autonomous deployments, code execution, or web actions without your sign-off. |
+| **Security First** | Every layer is hardened. Zero-trust networking, secrets management, audit logs, and intrusion detection built in from day one. |
+| **Open Source Priority** | Prefer open, auditable tools. Avoid vendor lock-in. Own your data and your stack. |
+| **Phased Growth** | Start simple and stable. Add complexity only when the foundation is proven. Never chase hype. |
+
+---
+
+## The Seven-Layer Architecture
+
+| Layer | Description |
+|-------|-------------|
+| **Layer 7 — Interface** | OpenCode IDE, Claude.ai, Web UI, CLI dashboard. Where you interact. |
+| **Layer 6 — Orchestration** | LangGraph / CrewAI agent graphs. Coordinates multi-agent tasks. |
+| **Layer 5 — Agent Fleet** | Specialized AI agents: Orchestrator, Coder, Researcher, Planner, Security, QA, Writer, Data. |
+| **Layer 4 — Tool & MCP Bus** | MCP servers, plugins, GitHub, browser, file system, APIs. |
+| **Layer 3 — Memory & Knowledge** | Vector DB (Chroma), graph store (Neo4j), SQL state (SQLite), long-term memory, session cache (Redis). |
+| **Layer 2 — AI Models** | Claude (primary), local LLMs via Ollama (fallback/privacy), embeddings. |
+| **Layer 1 — Infrastructure** | Local machine + cloud VPS, Docker containers, secrets vault, monitoring stack. |
+
+---
+
+## Data Flow
+
+You give an instruction → Orchestrator breaks it into subtasks → Agents pick up subtasks → Tools/MCPs execute actions → Memory stores results → Orchestrator assembles output → You review & approve → done.
+
+**Human Approval Checkpoints**
+- Any code execution on production systems
+- Any outbound API calls that create, update, or delete data
+- Dependency installs or version upgrades
+- GitHub pushes, PRs, or releases
+- Any scheduled or autonomous background tasks (require explicit whitelist)
+
 ---
 
 ## Phase 1: Foundation (Weeks 1–4)
 
-**Goal**: Basic AI coding assistant with file, git, and memory capabilities.
+**Goal**: Basic AI coding assistant with file, git, memory, and security capabilities.
 
-- [ ] Install OpenCode and connect to Gemini / NVIDIA fallback
-- [ ] Set up `jarvis/` folder structure
-- [ ] Configure MCP servers: filesystem, github, memory, sqlite, fetch
-- [ ] Create Obsidian vault for personal knowledge base
-- [ ] Set up Bitwarden/1Password for secrets management
-- [ ] Install gitleaks for secret scanning
-- [ ] Configure Tailscale VPN (optional, for multi-machine setup)
+- [ ] Install OpenCode IDE and connect to Claude via the Anthropic API
+- [ ] Install Ollama (LLaMA 3 / Mistral) for local LLM fallback and privacy-sensitive tasks
+- [ ] Install Node.js 20+, Python 3.11+, and Docker Desktop
+- [ ] Set up `jarvis/` folder structure:
+  ```
+  jarvis/
+  ├── agents/           # Agent definitions, roles, goals, prompts
+  │   ├── coder/
+  │   ├── researcher/
+  │   ├── planner/
+  │   ├── security/
+  │   ├── qa/
+  │   ├── writer/
+  │   └── data/
+  ├── mcp-servers/      # All MCP server configs and custom servers
+  ├── memory/           # Chroma DB data, SQLite files, Redis config
+  │   ├── chroma/
+  │   ├── sqlite/
+  │   └── obsidian-vault/
+  ├── workflows/        # n8n exports, LangGraph graphs, automation scripts
+  ├── tools/            # Custom tools, scripts, utilities
+  ├── infrastructure/   # Docker configs, env files, monitoring setup
+  │   ├── docker-compose.yml
+  │   ├── .env.example  # NEVER commit real .env files
+  │   └── monitoring/
+  ├── security/         # Vault config, certs, access policies
+  ├── github-repos/     # Cloned repos under active development
+  ├── logs/             # Audit logs, agent logs, error logs
+  └── docs/             # Blueprint and all system documentation
+  ```
+- [ ] Configure core MCP servers: filesystem, github, memory, fetch
+- [ ] Create Obsidian vault for personal knowledge base and link it to agent context
+- [ ] First agent: Coder Agent — can read/write files and commit to GitHub with your approval
 - [ ] Test: Ask AI to write code, review draft, approve commit
 
-**Deliverable**: You can ask JARVIS to write code, review it, and commit to GitHub with your approval.
+### Phase 1 — Security Implementation
+
+- [ ] Set up Bitwarden or 1Password for secrets management — all secrets go here from day one
+- [ ] Install git-secrets and gitleaks for secret scanning
+- [ ] Enable SSH key authentication (Ed25519) and disable password login on all servers
+- [ ] Enable multi-factor authentication on GitHub and any service with admin access (authenticator app, not SMS)
+- [ ] Configure UFW firewall (Linux) or cloud security group: default deny all, allow explicitly (SSH/22 and VPN only)
+- [ ] Configure Tailscale VPN (optional, for multi-machine setup)
+- [ ] Set up cron + shell scripts for simple scheduled tasks: backups, health checks, log cleanup
+- [ ] Define Principle of Least Privilege: assign minimal permissions to each agent and MCP server (researcher cannot write code; coder cannot push to production)
+- [ ] Enforce: never commit API keys, passwords, or private keys to code or git (block via git-secrets / gitleaks)
+- [ ] Encrypt local disks containing sensitive data (LUKS on Linux, FileVault on Mac)
+
+**Deliverable**: You can ask JARVIS to write code, review it, and commit to GitHub with your approval. Security foundation is live.
 
 **Cost**: ~$20-50/month (Anthropic API usage)
 
@@ -34,18 +114,31 @@ Phase 4 ─► Advanced Capabilities (Weeks 15-24)
 
 ## Phase 2: Memory & Research (Weeks 5–8)
 
-**Goal**: Persistent memory, web research, and structured planning.
+**Goal**: Persistent memory, web research, structured planning, and operational safety.
 
 - [ ] Install Chroma DB locally (via Docker or local Python)
 - [ ] Set up nomic-embed-text for local embeddings
+- [ ] Add Redis for session caching
 - [ ] Add browser-mcp (Playwright) and search-mcp (SearXNG)
-- [ ] Create Researcher Agent — can search web and store findings in Chroma
-- [ ] Set up SQLite for task history and approval queue
-- [ ] Add Planner Agent — reads Obsidian notes and creates structured plans
-- [ ] Install n8n for simple automation (daily research digests)
-- [ ] Set up Grafana + Prometheus for basic monitoring
+- [ ] Add docker-mcp and calendar-mcp
+- [ ] Configure sqlite-mcp and set up SQLite for task history and approval queue
+- [ ] Create Researcher Agent — can search the web and store findings in Chroma
+- [ ] Create Planner Agent — reads Obsidian notes and creates structured plans with dependencies, time estimates, and risk flags
+- [ ] Install n8n for simple automation (e.g., daily research digests sent to Obsidian)
+- [ ] Set up Grafana + Prometheus for basic system monitoring and Loki for log aggregation
 
-**Deliverable**: Agents can research, remember, and plan. Working knowledge base.
+### Phase 2 — Security Implementation
+
+- [ ] Implement approval queue: all state-modifying agent actions require your sign-off
+- [ ] Define action whitelist: read files, search web, run tests in sandbox = auto-allowed; everything else requires approval
+- [ ] Implement output validation: code is run in sandbox first; SQL queries are syntax-checked; API calls are previewed as dry-runs
+- [ ] Configure rate limiting on all APIs and web interfaces
+- [ ] Implement 3-2-1 backup strategy (Restic + Backblaze B2) for automated encrypted backups; test restores monthly
+- [ ] Encrypt Chroma DB folder and SQLite files at rest
+- [ ] Apply data minimization: agents only access data they need; do not store sensitive personal data in vector databases unless necessary
+- [ ] All HTTP traffic uses HTTPS; use Let's Encrypt for free TLS certificates; never transmit secrets over plain HTTP
+
+**Deliverable**: Agents can research, remember, and plan. You have a working knowledge base with safety rails and monitoring.
 
 **Cost**: ~$30-60/month (adds SearXNG hosting ~$5/month)
 
@@ -53,18 +146,28 @@ Phase 4 ─► Advanced Capabilities (Weeks 15-24)
 
 ## Phase 3: Multi-Agent Orchestration (Weeks 9–14)
 
-**Goal**: Full multi-agent system with safety rails, monitoring, and CI/CD.
+**Goal**: Full multi-agent system with deterministic orchestration, safety rails, monitoring, and CI/CD.
 
-- [ ] Implement deterministic orchestration graph connecting all agents
+- [ ] Implement LangGraph orchestration graph connecting all agents (CrewAI and AutoGen available for specialized team workflows)
+- [ ] Add Orchestrator Agent — receives high-level instructions, breaks into subtasks, assigns to agents, monitors progress, assembles final output
 - [ ] Add QA Agent and Security Agent to the pipeline
-- [ ] Set up code-sandbox-mcp for safe code execution
-- [ ] Implement full audit logging to immutable append-only log
-- [ ] Add HashiCorp Vault for secrets management
-- [ ] Set up Falco for container security monitoring
-- [ ] Configure GitHub Actions for automated testing
+- [ ] Set up code-sandbox-mcp for safe code execution in isolated Docker networks with no internet access by default
+- [ ] Configure GitHub Actions for automated testing on every commit
 - [ ] Add Temporal.io for durable long-running workflows (optional; not yet wired)
 
-**Deliverable**: Full multi-agent system with safety rails and CI/CD.
+### Phase 3 — Security Implementation
+
+- [ ] Implement full audit logging to immutable append-only log files (timestamp, agent ID, action type, inputs, outputs, approval status)
+- [ ] Add HashiCorp Vault for centralized secrets management — agents request secrets at runtime, never store in code or config
+- [ ] Set up Falco for real-time container security monitoring
+- [ ] Implement zero-trust networking with mTLS between services
+- [ ] Add prompt injection defense: sanitize all external content (web scraping, file contents, user inputs) before passing to LLMs
+- [ ] Implement kill switch: single flag in SQLite stops all agents immediately; agents check this flag before every action
+- [ ] Deploy Security Agent audits: dependency CVE checks, log anomaly detection, policy validation
+- [ ] Set up Fail2Ban to automatically ban IPs showing brute-force attack signs against SSH or web interfaces
+- [ ] Maintain isolated sandbox networks: AI code execution happens in Docker networks isolated from real systems; no internet access from sandbox by default
+
+**Deliverable**: Full multi-agent system with deterministic orchestration, safety rails, monitoring, and CI/CD.
 
 **Cost**: ~$50-80/month (adds VPS for Temporal ~$10-20/month)
 
@@ -72,20 +175,146 @@ Phase 4 ─► Advanced Capabilities (Weeks 15-24)
 
 ## Phase 4: Advanced Capabilities (Weeks 15–24)
 
-**Goal**: Near-complete JARVIS system with knowledge graphs, voice, and self-monitoring.
+**Goal**: Near-complete JARVIS system with knowledge graphs, voice, self-monitoring, and advanced analytics.
 
-- [ ] Add Neo4j knowledge graph — map relationships between projects, tools, people
+- [ ] Add Neo4j knowledge graph — map relationships between projects, tools, people, and code
 - [ ] Integrate Whisper for voice input to agents
-- [ ] Deploy cloud VPS for public-facing workflows
-- [ ] Add Writer Agent for automatic documentation generation
-- [ ] Implement self-monitoring: agents flag their own errors
-- [ ] Add Data Agent with sandboxed Python for analysis
-- [ ] Explore local LLM fine-tuning (advanced, optional)
-- [ ] Quarterly security audit
+- [ ] Deploy cloud VPS for public-facing workflows and always-on automation
+- [ ] Add Writer Agent for automatic documentation generation (READMEs, changelogs, reports)
+- [ ] Add Data Agent with sandboxed Python for analysis, reporting, and chart generation
+- [ ] Implement self-monitoring: agents flag their own errors and request help
+- [ ] Integrate GPT-4o for vision tasks and structured outputs if Claude coverage gaps exist (optional)
+- [ ] Explore local LLM fine-tuning for domain-specific tasks (advanced, optional)
+
+### Phase 4 — Security Implementation
+
+- [ ] Quarterly security audit: rotate all API keys (90-day cycle), review permissions, test backups, practice incident playbook
+- [ ] Document and maintain incident response playbook: agent misbehavior, credential leaks, service compromise
+- [ ] Review and update the action whitelist, approval queue rules, and kill switch procedures
 
 **Deliverable**: A near-complete JARVIS system. Research, code, plan, build, monitor, document — all in one.
 
 **Cost**: ~$70-120/month (adds Neo4j hosting, VPS upgrades)
+
+---
+
+## Agent Fleet
+
+Each agent is a specialized AI with a defined role, a set of tools, and clear boundaries. Specialization makes agents more reliable and easier to audit.
+
+| Agent | Role & Access |
+|-------|---------------|
+| **Orchestrator** | The general. Receives your high-level instruction, breaks it into subtasks, assigns to agents, monitors progress, assembles final output. Does not execute actions directly. |
+| **Coder Agent** | Writes, reviews, tests, and refactors code. Has access to filesystem-mcp, github-mcp, code-sandbox-mcp. Cannot push to production without approval. |
+| **Researcher Agent** | Searches the web, reads documentation, summarizes findings, checks for new tools and security vulnerabilities. Has access to browser-mcp, search-mcp, fetch-mcp. |
+| **Planner Agent** | Breaks complex goals into step-by-step plans with dependencies, time estimates, and risk flags. Creates project structures in Obsidian. |
+| **Security Agent** | Audits code for vulnerabilities, checks dependency CVEs, monitors logs for anomalies, validates agent actions against security policy. |
+| **QA Agent** | Writes and runs tests, validates outputs, compares before/after states, flags regressions. Always runs before Coder Agent pushes code. |
+| **Writer Agent** | Drafts documentation, READMEs, changelogs, reports, and emails. Has access to filesystem-mcp only. |
+| **Data Agent** | Queries databases, builds reports, analyzes CSVs, generates charts. Has access to sqlite-mcp and a sandboxed Python environment. |
+
+---
+
+## Local + Cloud Hybrid Setup
+
+| Location | What Lives There |
+|----------|------------------|
+| **Your Local Machine** | OpenCode IDE, Ollama (local LLM), Obsidian vault, personal key storage, Tailscale client. |
+| **Home Server / NAS (optional)** | Chroma DB, n8n, monitoring stack (Grafana/Prometheus/Loki), backups. Always-on, low power. |
+| **Cloud VPS (Hetzner / Fly.io)** | Public-facing services, GitHub Actions runners, Temporal.io, SearXNG search. ~$5–20/month. |
+| **Cloud Storage (Backblaze B2)** | Encrypted backups only. $0.006/GB/month — cheapest reliable option. Never store unencrypted data. |
+| **Anthropic API** | Claude for primary reasoning. API calls from your local machine or VPS, never from untrusted environments. |
+
+**Beginner Recommendation**: Start with just your local machine and the Anthropic API. Add a home server in Phase 2 and cloud VPS in Phase 3.
+
+**Total Phase 1 cost**: Your existing hardware + Anthropic API usage (~$20–50/month depending on use).
+
+---
+
+## Never Do These Things
+
+**Hard Rules — No Exceptions**
+
+- [ ] Never put API keys or passwords in code files or git repositories
+- [ ] Never give an agent production database write access without an approval gate
+- [ ] Never run agent-generated code on your main machine without sandbox testing first
+- [ ] Never skip the security agent step before deploying code
+- [ ] Never use the same API key for development and production
+- [ ] Never expose services to the public internet without authentication and rate limiting
+- [ ] Never let the system update its own dependencies without your explicit approval
+
+---
+
+## Recommended Learning Resources
+
+- [ ] LangGraph documentation: langchain-ai.github.io/langgraph
+- [ ] Model Context Protocol: modelcontextprotocol.io
+- [ ] HashiCorp Vault getting started: developer.hashicorp.com/vault
+- [ ] Tailscale documentation: tailscale.com/kb
+- [ ] Grafana getting started: grafana.com/docs/grafana/latest/getting-started
+- [ ] n8n self-hosting guide: docs.n8n.io/hosting
+
+---
+
+## Dependency & Version Management
+
+### Rules
+- [ ] Pin all dependencies to exact versions in your config files. Never use `latest` in production.
+- [ ] Use Renovate Bot (free, open source) to automatically open PRs for dependency updates. Review before merging.
+- [ ] Run Dependabot on all GitHub repositories. It flags security vulnerabilities in dependencies automatically.
+- [ ] Before upgrading any dependency, run your full test suite in the sandbox environment first.
+- [ ] Keep a changelog. Every upgrade is documented with the version, date, and reason.
+- [ ] Use Docker for all services — container images lock dependency versions perfectly.
+
+### The Safety Loop for Updates
+1. Renovate Bot opens a PR with the proposed update
+2. Security Agent reviews the changelog for breaking changes or CVEs
+3. QA Agent runs tests in the sandbox environment
+4. You review the QA report and approve or reject the PR
+5. If approved, GitHub Actions deploys the update and monitors for errors
+6. If errors appear within 24 hours, automated rollback to previous version
+
+---
+
+## Ironclad Security Framework
+
+Security is not optional. An autonomous AI system with access to your files, code, GitHub, and APIs is a high-value target. The checklist items above are implemented phase-by-phase; this section provides the complete reference framework.
+
+### Identity & Access Management
+- **Principle of Least Privilege**: Every agent and MCP server gets only the permissions it needs. The researcher agent cannot write code. The coder agent cannot push to production.
+- **API Key Rotation**: Rotate all API keys every 90 days. Use a password manager (Bitwarden, 1Password). Never reuse keys across services.
+- **HashiCorp Vault**: Centralized secrets management. Agents request secrets at runtime — secrets are never stored in code or config files.
+- **Multi-Factor Authentication**: Enable MFA on GitHub, cloud providers, and any service with admin access. Use an authenticator app, not SMS.
+- **SSH Key Authentication**: Disable password login on all servers. Use Ed25519 SSH keys. Store private keys only on your local machine.
+
+### Network Security
+- **Zero-Trust Networking**: Every service authenticates every request. Nothing is trusted just because it's on the same machine. Use mTLS between services.
+- **Tailscale VPN**: Private mesh network for all your machines. Access your home server from anywhere without exposing ports. Free tier is generous.
+- **Firewall Rules**: Block all inbound ports except SSH (22) and your VPN. Use UFW (Linux) or a cloud security group. Default: deny all, allow explicitly.
+- **Rate Limiting**: All APIs and web interfaces must have rate limiting. Prevents brute force and runaway agents from hammering services.
+- **Isolated Sandbox Networks**: AI code execution must happen in a Docker network isolated from your real systems. No internet access from the sandbox by default.
+
+### Data Protection
+- **Encryption at Rest**: Encrypt all disks containing sensitive data (LUKS on Linux, FileVault on Mac). Encrypt the Chroma DB folder and SQLite files.
+- **Encryption in Transit**: All HTTP traffic uses HTTPS. Use Let's Encrypt for free TLS certificates. Never transmit secrets over plain HTTP.
+- **Backup Strategy (3-2-1)**: 3 copies, 2 different media types, 1 offsite. Use Restic + Backblaze B2 for automated encrypted backups. Test restores monthly.
+- **Data Minimization**: Don't give agents access to data they don't need. Don't store sensitive personal data in vector databases unless necessary.
+- **Secret Scanning**: Install git-secrets or Gitleaks. Block commits that contain API keys, passwords, or private keys.
+
+### Agent Safety Controls
+- **Approval Queue**: All agent actions that modify state go into a queue. You see a summary: what the agent wants to do, why, and the estimated impact. You approve or reject.
+- **Action Whitelist**: Maintain an explicit list of actions agents can take without approval: read files, search the web, run tests in sandbox. Everything else requires approval.
+- **Output Validation**: All agent outputs are validated before use. Code is run in sandbox first. SQL queries are syntax-checked. API calls are previewed as dry-runs.
+- **Prompt Injection Defense**: Agents should never pass unvalidated external content directly into prompts. Sanitize web scraping results, file contents, and user inputs before passing to LLMs.
+- **Kill Switch**: A single command must be able to stop all agents immediately. Implement as a flag in SQLite: agents check this flag before every action.
+- **Audit Log**: Every agent action is logged with timestamp, agent ID, action type, inputs, outputs, and whether it was approved or auto-executed. Immutable, append-only log.
+
+### Monitoring & Incident Response
+- **Grafana + Prometheus**: Real-time dashboards for system health, API usage, error rates, agent activity. Set alerts for anomalous behavior.
+- **Loki (log aggregation)**: Centralized log collection from all containers. Search across all logs in one place. Part of the Grafana stack.
+- **Falco (container security)**: Detects suspicious behavior inside Docker containers in real time. Alerts if a container tries to access files or network it shouldn't.
+- **Fail2Ban**: Automatically bans IPs that show signs of brute-force attacks against SSH or web interfaces.
+- **Incident Playbook**: Document what to do if an agent misbehaves, if credentials are leaked, or if a service is compromised. Practice the playbook quarterly.
 
 ---
 
@@ -96,6 +325,8 @@ Phase 4 ─► Advanced Capabilities (Weeks 15-24)
 3. **Test everything** — Every component should be verified before depending on it
 4. **Security from day one** — Not added later, built into every phase
 5. **You stay in control** — The system proposes, you approve
+
+---
 
 ## When to Stop
 
