@@ -2,14 +2,13 @@
   "$schema": "https://opencode.ai/config.json",
 
   // ============================================================
-  // User preferences
-  // - Primary: Gemini (when available)
-  // - Fallback: NVIDIA (use now if Gemini quota is 0)
-  // - Do not use paid Claude unless explicitly requested
+  // User preferences — LOCAL-FIRST, no paid API keys
+  // - Primary: Ollama (local, free, private)
+  // - No Anthropic, no Gemini, no OpenAI
   // ============================================================
-  "disabled_providers": ["anthropic"],
-  "model": "nvidia/meta/llama-3.1-8b-instruct",
-  "small_model": "nvidia/meta/llama-3.1-8b-instruct",
+  "disabled_providers": ["anthropic", "google", "openai"],
+  "model": "ollama/llama3.2",
+  "small_model": "ollama/llama3.2",
 
   // ============================================================
   // MCP servers (tools)

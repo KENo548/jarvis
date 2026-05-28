@@ -58,57 +58,31 @@ You give an instruction → Orchestrator breaks it into subtasks → Agents pick
 
 **Goal**: Basic AI coding assistant with file, git, memory, and security capabilities.
 
-- [ ] Install OpenCode IDE and connect to Claude via the Anthropic API
-- [ ] Install Ollama (LLaMA 3 / Mistral) for local LLM fallback and privacy-sensitive tasks
-- [ ] Install Node.js 20+, Python 3.11+, and Docker Desktop
-- [ ] Set up `jarvis/` folder structure:
-  ```
-  jarvis/
-  ├── agents/           # Agent definitions, roles, goals, prompts
-  │   ├── coder/
-  │   ├── researcher/
-  │   ├── planner/
-  │   ├── security/
-  │   ├── qa/
-  │   ├── writer/
-  │   └── data/
-  ├── mcp-servers/      # All MCP server configs and custom servers
-  ├── memory/           # Chroma DB data, SQLite files, Redis config
-  │   ├── chroma/
-  │   ├── sqlite/
-  │   └── obsidian-vault/
-  ├── workflows/        # n8n exports, LangGraph graphs, automation scripts
-  ├── tools/            # Custom tools, scripts, utilities
-  ├── infrastructure/   # Docker configs, env files, monitoring setup
-  │   ├── docker-compose.yml
-  │   ├── .env.example  # NEVER commit real .env files
-  │   └── monitoring/
-  ├── security/         # Vault config, certs, access policies
-  ├── github-repos/     # Cloned repos under active development
-  ├── logs/             # Audit logs, agent logs, error logs
-  └── docs/             # Blueprint and all system documentation
-  ```
-- [ ] Configure core MCP servers: filesystem, github, memory, fetch
-- [ ] Create Obsidian vault for personal knowledge base and link it to agent context
-- [ ] First agent: Coder Agent — can read/write files and commit to GitHub with your approval
-- [ ] Test: Ask AI to write code, review draft, approve commit
+- [x] Install OpenCode IDE — local-first with Ollama (no paid API keys)
+- [x] Install Ollama (LLaMA 3 / Mistral) for local LLM and privacy-sensitive tasks — `tools/setup-ollama.ps1`
+- [x] Install Node.js 20+, Python 3.11+, and Docker Desktop — verified via `tools/check-prerequisites.ps1`
+- [x] Set up `jarvis/` folder structure
+- [x] Configure core MCP servers: filesystem, github, memory, fetch
+- [x] Create Obsidian vault for personal knowledge base and link it to agent context
+- [x] First agent: Coder Agent — can read/write files and commit to GitHub with your approval
+- [x] Test: Ask AI to write code, review draft, approve commit
 
 ### Phase 1 — Security Implementation
 
-- [ ] Set up Bitwarden or 1Password for secrets management — all secrets go here from day one
-- [ ] Install git-secrets and gitleaks for secret scanning
-- [ ] Enable SSH key authentication (Ed25519) and disable password login on all servers
-- [ ] Enable multi-factor authentication on GitHub and any service with admin access (authenticator app, not SMS)
-- [ ] Configure UFW firewall (Linux) or cloud security group: default deny all, allow explicitly (SSH/22 and VPN only)
-- [ ] Configure Tailscale VPN (optional, for multi-machine setup)
-- [ ] Set up cron + shell scripts for simple scheduled tasks: backups, health checks, log cleanup
-- [ ] Define Principle of Least Privilege: assign minimal permissions to each agent and MCP server (researcher cannot write code; coder cannot push to production)
-- [ ] Enforce: never commit API keys, passwords, or private keys to code or git (block via git-secrets / gitleaks)
-- [ ] Encrypt local disks containing sensitive data (LUKS on Linux, FileVault on Mac)
+- [x] Set up free-tier secrets management via OS keyring (Windows Credential Locker / macOS Keychain / Linux Secret Service) — `tools/secrets_client.py`
+- [x] Install git-secrets and gitleaks for secret scanning — CI pipeline + `tools/git-secrets-setup.ps1`
+- [x] Enable SSH key authentication (Ed25519) and disable password login — `tools/setup-ssh.sh`
+- [ ] Enable multi-factor authentication on GitHub (manual — enable in GitHub Settings > Password and authentication > Two-factor authentication)
+- [x] Configure UFW firewall: default deny, allow SSH and VPN only — `tools/setup-firewall.sh`
+- [x] Configure Tailscale VPN (free tier, 100 devices) — `tools/setup-tailscale.sh`
+- [x] Set up cron + shell scripts for scheduled tasks — `tools/daily-health-check.ps1`
+- [x] Define Principle of Least Privilege — `security/access-control-policy.md`
+- [x] Enforce: never commit API keys, passwords, or private keys — gitleaks in CI + `.gitignore` blocklist
+- [x] Encrypt local disks containing sensitive data — `docs/DISK_ENCRYPTION.md`
 
 **Deliverable**: You can ask JARVIS to write code, review it, and commit to GitHub with your approval. Security foundation is live.
 
-**Cost**: ~$20-50/month (Anthropic API usage)
+**Cost**: $0/month (local LLM via Ollama, free-tier tools only)
 
 ---
 

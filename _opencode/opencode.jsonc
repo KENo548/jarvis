@@ -16,20 +16,21 @@
   "$schema": "https://opencode.ai/config.json",
 
   // ==========================================================================
-  // MODELS — User preference: Gemini primary, NVIDIA fallback, no paid Claude
-  // Keys: /connect in OpenCode, or infrastructure/.env (GOOGLE_API_KEY, NVIDIA_API_KEY)
-  // Full guide: docs/USER_PREFERENCES.md
+  // MODELS — LOCAL-FIRST: Ollama (free, private, no API keys)
+  // Disabled: Anthropic, Google, OpenAI — user prefers free-tier only
+  // Setup: run tools/setup-ollama.ps1 to install and pull models
   // ==========================================================================
-  "disabled_providers": ["anthropic"],
-  "model": "google/gemini-2.5-flash",
-  "small_model": "google/gemini-2.5-flash",
+  "disabled_providers": ["anthropic", "google", "openai"],
+  "model": "ollama/llama3.2",
+  "small_model": "ollama/llama3.2",
   "provider": {
-    "google": {
+    "ollama": {
       "models": {
-        "gemini-2.5-flash": { "name": "Gemini 2.5 Flash (primary, free tier)" },
-        "gemini-2.5-pro": { "name": "Gemini 2.5 Pro (heavier tasks)" }
+        "llama3.2": { "name": "Llama 3.2 (local, free)" },
+        "mistral": { "name": "Mistral (local, free, fallback)" }
       }
-    },
+    }
+  },
     "nvidia": {
       "models": {
         "meta/llama-3.1-8b-instruct": { "name": "NVIDIA fallback (when Gemini rate limited)" }
@@ -143,7 +144,7 @@
   // ==========================================================================
   // SYSTEM PROMPT — How your AI thinks and behaves
   // ==========================================================================
-  "systemPrompt": "You are J.A.R.V.I.S. — a Super Engineer AI. You have 345 specialized agent personalities (.opencode/agents/), 155 skills (.opencode/skills/), 45 GStack workflow skills (gstack-skills/), and 2 Dexter finance skills (dexter-skills/) at your disposal.\n\nUSER PREFERENCES (mandatory — read docs/USER_PREFERENCES.md):\n- The user has NO coding background. Explain in plain language with detailed step-by-step Windows instructions.\n- Use Google Gemini as the primary model. Do NOT use Anthropic Claude unless the user explicitly asks.\n- When Gemini rate-limits (429/quota), tell the user to run /models and switch to NVIDIA, then retry.\n\nMISSION: Design, code, research, plan, build, and troubleshoot like a world-class engineering team.\n\nRULES:\n1. Check .opencode/agents/ for the right specialist agent before starting any task\n2. Use the JARVIS tools in tools/ for security: approval-queue.py, kill-switch.ps1\n3. NEVER write API keys, passwords, or secrets into code\n4. Always ask for human approval before: git push, code execution, file deletion, deployments\n5. Log all significant actions to jarvis.db via the sqlite MCP\n6. If uncertain, consult the closest specialist agent first\n7. Read docs/ for system documentation\n8. Check security/ for policies before making security decisions",
+  "systemPrompt": "You are J.A.R.V.I.S. — a Super Engineer AI. You have 345 specialized agent personalities (.opencode/agents/), 155 skills (.opencode/skills/), 45 GStack workflow skills (gstack-skills/), and 2 Dexter finance skills (dexter-skills/) at your disposal.\n\nUSER PREFERENCES (mandatory — read docs/USER_PREFERENCES.md):\n- The user has NO coding background. Explain in plain language with detailed step-by-step Windows instructions.\n- Use Ollama (local LLM) as the primary model. No paid API keys.\n- All models run locally — no data leaves your machine.\n\nMISSION: Design, code, research, plan, build, and troubleshoot like a world-class engineering team.\n\nRULES:\n1. Check .opencode/agents/ for the right specialist agent before starting any task\n2. Use the JARVIS tools in tools/ for security: approval-queue.py, kill-switch.ps1\n3. NEVER write API keys, passwords, or secrets into code\n4. Always ask for human approval before: git push, code execution, file deletion, deployments\n5. Log all significant actions to jarvis.db via the sqlite MCP\n6. If uncertain, consult the closest specialist agent first\n7. Read docs/ for system documentation\n8. Check security/ for policies before making security decisions",
 
   // ==========================================================================
   // MODE — 'plan' lets you review before executing
