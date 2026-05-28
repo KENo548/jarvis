@@ -1,0 +1,68 @@
+# =============================================================================
+# JARVIS .gitignore — Never commit secrets or sensitive data
+# =============================================================================
+
+# Secrets and credentials
+.env
+.env.local
+*.env
+infrastructure/secrets/*
+!infrastructure/secrets/.gitkeep
+
+# Specific sensitive files
+security/vault-keys.txt
+
+# API keys and tokens
+**/config.json
+**/credentials.json
+
+# Sensitive data
+**/*.pem
+**/*.key
+**/id_rsa*
+**/*.cert
+
+# Vector database data (can contain indexed documents)
+memory/chroma/*
+!memory/chroma/.gitkeep
+
+# SQLite databases (can contain task history and secrets)
+memory/sqlite/*.db
+memory/sqlite/*.db-journal
+memory/sqlite/*.db-wal
+memory/sqlite/*.db-shm
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Docker data volumes
+data/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Dependencies
+.pnp
+.pnp.js
