@@ -16,6 +16,7 @@ security/vault-keys.txt
 security/neo4j-auth.txt
 security/.vault-keys.json
 security/.vault-root-token
+security/.secret-registry.json
 security/*.txt
 
 # API keys and tokens
