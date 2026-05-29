@@ -7,8 +7,9 @@ import traceback
 from pathlib import Path
 
 import sounddevice as sd
-from google import genai
-from google.genai import types
+# Gemini replaced with SAGE's Ollama backend
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools" / "embodiment"))
+from gemini_bridge import GeminiClient as genai_client_shim
 from ui import JarvisUI
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
@@ -825,10 +826,10 @@ class JarvisLive:
             stream.close()
 
     async def run(self):
-        client = genai.Client(
-            api_key=_get_api_key(),
-            http_options={"api_version": "v1beta"}
-        )
+        # LEGACY: This uses Gemini's native audio streaming API.
+        # For SAGE, use sage.py entry point instead.
+        # This code path is retained for backward compatibility only.
+        client = genai_client_shim(api_key="")
 
         while True:
             try:

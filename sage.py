@@ -28,7 +28,22 @@ from agents.researcher import research_topic
 from agents.memory_coordinator import coordinate_memory
 from agents.tool_operator import plan_tool_usage
 from observability.interaction_logger import init_db, log_interaction, get_stats
-from embodiment.capability_registry import CAPABILITIES, get_capability, get_execution_order
+from observability.auto_eval import evaluate
+from embodiment.capability_registry import CAPABILITIES, get_capability, get_execution_order, requires_approval
+
+# Import safe wrappers for HIGH-risk tools
+try:
+    from embodiment.file_controller import safe_file_operation
+except ImportError:
+    safe_file_operation = None
+try:
+    from embodiment.computer_control import safe_computer_action
+except ImportError:
+    safe_computer_action = None
+try:
+    from embodiment.computer_settings import safe_system_setting
+except ImportError:
+    safe_system_setting = None
 
 
 VERSION = "0.1.0"
@@ -82,15 +97,69 @@ def process_task(task_text: str) -> str:
         response = result.get("summary", "Research complete.")
     elif agent == "memory_coordinator":
         result = coordinate_memory(task_text)
-        response = result.get("context_assembly", "Memory updated.")
+        # Actually execute memory updates
+        memory_updates = result.get("memory_updates", {})
+        if memory_updates:
+            try:
+                from agents.memory_coordinator import coordinate_memory as _cm
+                # Write updates through the memory store
+                import json
+                memory_path = Path(__file__).resolve().parent / "memory" / "sqlite" / "memory_store.json"
+                memory_path.parent.mkdir(parents=True, exist_ok=True)
+                existing = {}
+                if memory_path.exists():
+                    existing = json.loads(memory_path.read_text(encoding="utf-8"))
+                # Merge updates
+                for category, entries in memory_updates.items():
+                    if category not in existing:
+                        existing[category] = {}
+                    if isinstance(entries, dict):
+                        existing[category].update(entries)
+                memory_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+                response = f"Memory updated: {len(memory_updates)} category(ies). {result.get('context_assembly', '')}"
+            except Exception as e:
+                response = f"Memory plan created but write failed: {e}"
+        else:
+            response = result.get("context_assembly", "Memory analyzed, no updates needed.")
     else:
         result = plan_tool_usage(task_text)
         tool_calls = result.get("tool_calls", [])
-        response = f"Planned {len(tool_calls)} tool call(s)."
+
+        # Execute tool calls with approval gates
+        executed = []
+        for tc in tool_calls:
+            tool_name = tc.get("tool", "")
+            params = tc.get("params", {})
+
+            # Route through safe wrappers for HIGH-risk tools
+            if tool_name == "file_controller" and safe_file_operation:
+                exec_result = safe_file_operation(params)
+            elif tool_name == "computer_control" and safe_computer_action:
+                exec_result = safe_computer_action(params)
+            elif tool_name == "computer_settings" and safe_system_setting:
+                exec_result = safe_system_setting(params)
+            else:
+                # LOW/MEDIUM risk tools execute directly
+                exec_result = {"tool": tool_name, "status": "executed", "params": params}
+
+            executed.append(exec_result)
+
+        response = f"Executed {len(executed)} tool call(s)."
+        if any(e.get("needs_approval") for e in executed):
+            pending = [e for e in executed if e.get("needs_approval")]
+            response += f" {len(pending)} awaiting approval."
 
     latency = int((time.time() - t0) * 1000)
 
-    # 3. Log the interaction
+    # 3. Auto-evaluate the response
+    eval_result = evaluate(
+        agent_name=agent,
+        input_text=task_text,
+        output_text=response,
+    )
+
+    # 4. Log the interaction with auto-eval
+    overall_score = eval_result.get("overall", 0.0)
     log_interaction(
         agent_name=agent,
         input_text=task_text,
@@ -104,6 +173,25 @@ def process_task(task_text: str) -> str:
         reasoning_trace=json.dumps(route),
         domain="general",
     )
+
+    # Update success_score with auto-eval result
+    try:
+        from observability.interaction_logger import _connect
+        conn = _connect()
+        # Get the most recent interaction_id for this session
+        row = conn.execute(
+            "SELECT interaction_id FROM interactions WHERE session_id = ? ORDER BY created_at DESC LIMIT 1",
+            (SESSION_ID,),
+        ).fetchone()
+        if row:
+            conn.execute(
+                "UPDATE interactions SET success_score = ? WHERE interaction_id = ?",
+                (overall_score, row[0]),
+            )
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
     return response
 

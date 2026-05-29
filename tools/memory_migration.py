@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # ---------------------------------------------------------------------------
 
 DEFAULT_SOURCE = Path(__file__).resolve().parent.parent / "Mark-XXXIX-main" / "memory" / "long_term.json"
+FALLBACK_SOURCE = Path(__file__).resolve().parent.parent / "Mark-XXXIX-main" / "memory" / "long_term.json"
 CHROMA_HOST = "localhost"
 CHROMA_PORT = 8000
 SQLITE_DB = Path(__file__).resolve().parent.parent / "memory" / "sqlite" / "jarvis.db"
@@ -34,8 +35,15 @@ SQLITE_DB = Path(__file__).resolve().parent.parent / "memory" / "sqlite" / "jarv
 def load_mark39_memory(source: Path) -> dict:
     """Load the Mark XXXIX JSON memory file."""
     if not source.exists():
-        print(f"[Migration] Source not found: {source}")
-        return {}
+        # Try fallback locations
+        for fallback in [DEFAULT_SOURCE, FALLBACK_SOURCE]:
+            if fallback.exists():
+                source = fallback
+                break
+        else:
+            print(f"[Migration] Source not found: {source}")
+            print(f"[Migration] Provide --source PATH or place long_term.json in Mark-XXXIX-main/memory/")
+            return {}
     try:
         data = json.loads(source.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}

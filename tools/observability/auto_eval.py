@@ -8,9 +8,9 @@ from typing import Any, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:
-    from llm_client import chat_completion
+    from llm_client import llm_chat
 except ImportError:
-    chat_completion = None  # type: ignore[assignment]
+    llm_chat = None  # type: ignore[assignment]
 
 from .interaction_logger import get_interaction, _connect
 
@@ -77,7 +77,7 @@ def evaluate(
     Uses the LLM as a judge to score on seven dimensions.
     Falls back to a neutral evaluation if LLM client is unavailable.
     """
-    if chat_completion is None:
+    if llm_chat is None:
         return _fallback_eval()
 
     prompt = JUDGE_PROMPT.format(
@@ -88,13 +88,13 @@ def evaluate(
     )
 
     try:
-        response = chat_completion(
+        response = llm_chat(
             messages=[{"role": "user", "content": prompt}],
-            model=model,
+            model="ollama/llama3.2",
             temperature=0.0,
             max_tokens=500,
         )
-        content = response.get("content", "")
+        content = response.text
         scores = _parse_scores(content)
         if scores:
             return scores
