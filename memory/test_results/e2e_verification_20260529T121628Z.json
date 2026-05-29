@@ -1,0 +1,132 @@
+{
+  "run_id": "e2e_20260529T121628Z",
+  "timestamp": "20260529T121628Z",
+  "overall": "PASS",
+  "passed": 9,
+  "total": 10,
+  "pass_threshold": 7,
+  "total_cost_usd": 0.0,
+  "avg_latency_ms": 10917,
+  "tests": [
+    {
+      "name": "Commander: research routing",
+      "task": "Research Python security vulnerabilities",
+      "agent": "commander",
+      "passed": true,
+      "reason": "routed to researcher (conf=0.90)",
+      "latency_ms": 13819,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"selected_agent\": \"researcher\", \"confidence\": 0.9, \"reasoning\": \"task requires expertise in research to identify specific security vulnerabilities in Python.\", \"task_type\": \"research\"}"
+    },
+    {
+      "name": "Commander: engineer routing",
+      "task": "Write a sorting algorithm",
+      "agent": "commander",
+      "passed": true,
+      "reason": "routed to engineer (conf=0.80)",
+      "latency_ms": 3550,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"selected_agent\": \"engineer\", \"confidence\": 0.8, \"reasoning\": \"Writing a sorting algorithm requires coding expertise.\", \"task_type\": \"coding\"}"
+    },
+    {
+      "name": "Commander: memory routing",
+      "task": "Remember my preference for dark mode",
+      "agent": "commander",
+      "passed": true,
+      "reason": "routed to memory_coordinator (conf=0.80)",
+      "latency_ms": 3844,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"selected_agent\": \"memory_coordinator\", \"confidence\": 0.8, \"reasoning\": \"The task involves recalling a specific preference, which is a common use case for the memory_coordinator agent.\", \"task_type\":..."
+    },
+    {
+      "name": "Planner: web scraper plan",
+      "task": "Build a web scraper for product prices",
+      "agent": "planner",
+      "passed": false,
+      "reason": "expected 3-8 steps, got 0 (keys: ['raw_text'])",
+      "latency_ms": 13477,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"raw_text\": \"{\\\"steps\\\": [{\\\"step\\\": 1, \\\"description\\\": \\\"Define project scope and requirements\\\\n\\\", \\\"agent\\\": \\\"Planner\\\", \\\"dependencies\\\": []}, {\\\"step\\\": 2, \\\"description\\\": \\\"Choose a program..."
+    },
+    {
+      "name": "Engineer: factorial code",
+      "task": "Write a Python function to calculate factorial",
+      "agent": "engineer",
+      "passed": true,
+      "reason": "generated code (82 chars) with def/class",
+      "latency_ms": 5330,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"code\": \"def factorial(n):\\n  if n == 0:\\n    return 1\\n  else:\\n    return n * factorial(n-1)\\n\", \"language\": \"python\", \"explanation\": \"This function uses recursion to calculate the factorial of a g..."
+    },
+    {
+      "name": "Researcher: list comprehensions",
+      "task": "What are Python list comprehensions",
+      "agent": "researcher",
+      "passed": true,
+      "reason": "summary (26 chars) + 3 findings",
+      "latency_ms": 6620,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"summary\": \"Python List Comprehensions\", \"key_findings\": [\"List comprehensions provide a concise way to create lists from existing lists or other iterables.\", \"They consist of brackets containing an ..."
+    },
+    {
+      "name": "Memory Coordinator: user preferences",
+      "task": "User prefers VS Code and works on JARVIS project",
+      "agent": "memory_coordinator",
+      "passed": true,
+      "reason": "produced memory_updates for 2 category(ies)",
+      "latency_ms": 52066,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"memory_updates\": {\"category\": \"user_preferences\", \"software\": {\"editor\": \"VS Code\"}}, \"relevant_memories\": [\"JARVIS project\"], \"context_assembly\": \"user's coding environment for the JARVIS project\"}"
+    },
+    {
+      "name": "Tool Operator: file download",
+      "task": "Download a file and save to desktop",
+      "agent": "tool_operator",
+      "passed": true,
+      "reason": "produced 1 tool_call(s)",
+      "latency_ms": 7125,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"tool_calls\": [{\"tool\": \"shell_command\", \"params\": {\"cmd\": [\"wget\", \"https://example.com/file.txt\"], \"cwd\": \"/home/user/Desktop\"}, \"purpose\": \"download and save the file to desktop\"}]}"
+    },
+    {
+      "name": "LLM Client: factual question",
+      "task": "What is the capital of France?",
+      "agent": "llm_client",
+      "passed": true,
+      "reason": "LLM responded with 'Paris' (40 tokens)",
+      "latency_ms": 3132,
+      "tokens": 40,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "The capital of France is Paris."
+    },
+    {
+      "name": "Observability: log + retrieve roundtrip",
+      "task": "Log interaction and verify retrieval",
+      "agent": "observability",
+      "passed": true,
+      "reason": "roundtrip OK (6 fields verified)",
+      "latency_ms": 209,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "error": "",
+      "result_preview": "{\"interaction_id\": \"int_18cf70a69ddd\", \"retrieved\": {\"interaction_id\": \"int_18cf70a69ddd\", \"session_id\": \"e2e_b043d408\", \"workflow_id\": \"\", \"timestamp\": \"2026-05-29T12:16:28.196033+00:00\", \"agent_name..."
+    }
+  ]
+}
