@@ -1,0 +1,144 @@
+# SAGE VPS Deployment — Docker Compose for Hetzner CX22
+# Runs agents, memory, and infrastructure on VPS.
+# Local machine runs HUD + voice (needs display/mic).
+# They talk via Tailscale VPN.
+#
+# Usage:
+#   docker compose -f docker-compose.vps.yml up -d
+#   docker compose -f docker-compose.vps.yml logs -f
+
+services:
+  # =========================================================================
+  # LLM INFERENCE — Ollama (runs on VPS for always-on availability)
+  # =========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sage-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - sage-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # =========================================================================
+  # VECTOR DB — Chroma
+  # =========================================================================
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: sage-chroma
+    restart: unless-stopped
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    ports:
+      - "8000:8000"
+    networks:
+      - sage-net
+
+  # =========================================================================
+  # SESSION CACHE — Redis
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: sage-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    networks:
+      - sage-net
+
+  # =========================================================================
+  # LOG AGGREGATION — Loki + Promtail
+  # =========================================================================
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: sage-loki
+    restart: unless-stopped
+    volumes:
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - sage-net
+
+  # =========================================================================
+  # MONITORING — Grafana
+  # =========================================================================
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: sage-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-sage-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    ports:
+      - "3000:3000"
+    networks:
+      - sage-net
+
+  # =========================================================================
+  # SEARCH — SearXNG
+  # =========================================================================
+  searxng:
+    image: searxng/searxng:latest
+    container_name: sage-searxng
+    restart: unless-stopped
+    volumes:
+      - searxng-data:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-sage-local-secret}
+    ports:
+      - "8888:8080"
+    networks:
+      - sage-net
+
+  # =========================================================================
+  # VOICE — Whisper STT (always-on for VPS mode)
+  # =========================================================================
+  whisper:
+    image: jarvis/voice:latest
+    container_name: sage-whisper
+    restart: unless-stopped
+    environment:
+      - WHISPER_MODEL=base
+    ports:
+      - "8081:8081"
+    networks:
+      - sage-net
+    profiles:
+      - voice
+
+volumes:
+  ollama-data:
+  chroma-data:
+  redis-data:
+  loki-data:
+  grafana-data:
+  searxng-data:
+
+networks:
+  sage-net:
+    driver: bridge
