@@ -103,7 +103,6 @@ def process_task(task_text: str) -> str:
             try:
                 from agents.memory_coordinator import coordinate_memory as _cm
                 # Write updates through the memory store
-                import json
                 memory_path = Path(__file__).resolve().parent / "memory" / "sqlite" / "memory_store.json"
                 memory_path.parent.mkdir(parents=True, exist_ok=True)
                 existing = {}
