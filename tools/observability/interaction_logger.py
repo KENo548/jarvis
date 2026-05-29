@@ -1,6 +1,7 @@
 """SQLite-based interaction logging for SAGE AI ecosystem."""
 
 import json
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -8,6 +9,28 @@ from pathlib import Path
 from typing import Any, Optional
 
 DEFAULT_DB = Path(r"C:\jarvis\memory\sqlite\interactions.db")
+
+# ---------------------------------------------------------------------------
+# PII redaction
+# ---------------------------------------------------------------------------
+
+_PII_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("EMAIL", re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")),
+    ("PHONE", re.compile(r"(?<!\d)(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)")),
+    ("SSN", re.compile(r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)")),
+    ("CARD", re.compile(r"(?<!\d)\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}(?!\d)")),
+    ("IP", re.compile(r"(?<!\d)(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)(?!\d)")),
+    ("KEY", re.compile(r"(?:api[_-]?key|token|secret|password)\s*[:=]\s*['\"]?([A-Za-z0-9\-_]{20,})['\"]?", re.IGNORECASE)),
+]
+
+
+def _redact_pii(text: str) -> str:
+    """Mask PII patterns in text."""
+    if not text:
+        return text
+    for label, pattern in _PII_PATTERNS:
+        text = pattern.sub(f"[{label} REDACTED]", text)
+    return text
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS interactions (
@@ -35,6 +58,7 @@ CREATE TABLE IF NOT EXISTS interactions (
     followup_prompt TEXT,
     success_score REAL DEFAULT 0.0,
     domain TEXT DEFAULT 'general',
+    token_cost_usd REAL DEFAULT 0.0,
     created_at TEXT NOT NULL
 );
 """
@@ -54,6 +78,11 @@ def init_db(db_path: Optional[str | Path] = None) -> None:
     conn = _connect(db_path)
     try:
         conn.executescript(SCHEMA_SQL)
+        # Backward-compatible: add token_cost_usd if missing from older tables
+        try:
+            conn.execute("SELECT token_cost_usd FROM interactions LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE interactions ADD COLUMN token_cost_usd REAL DEFAULT 0.0")
         conn.commit()
     finally:
         conn.close()
@@ -73,11 +102,15 @@ def log_interaction(
     quality: str = "",
     correction: str = "",
     domain: str = "general",
+    token_cost_usd: float = 0.0,
     db_path: Optional[str | Path] = None,
 ) -> str:
     """Insert a new interaction row and return its interaction_id."""
     interaction_id = f"int_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
+
+    redacted_input = _redact_pii(input_text)
+    redacted_output = _redact_pii(output_text)
 
     conn = _connect(db_path)
     try:
@@ -88,8 +121,8 @@ def log_interaction(
                 tool_calls, tool_outputs, reasoning_trace, output_text,
                 latency_ms, token_usage, auto_eval, human_feedback,
                 correction, retry_count, was_edited, was_abandoned,
-                followup_prompt, success_score, domain, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                followup_prompt, success_score, domain, token_cost_usd, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 interaction_id,
                 session_id,
@@ -97,13 +130,13 @@ def log_interaction(
                 now,
                 agent_name,
                 model,
-                input_text,
+                redacted_input,
                 json.dumps(memory_context_snapshot) if isinstance(memory_context_snapshot, dict) else memory_context_snapshot,
                 json.dumps([]),
                 json.dumps(tool_calls_made or []),
                 json.dumps([]),
                 reasoning_trace,
-                output_text,
+                redacted_output,
                 duration_ms,
                 json.dumps({}),
                 json.dumps({}),
@@ -115,6 +148,7 @@ def log_interaction(
                 "",
                 0.0,
                 domain,
+                token_cost_usd,
                 now,
             ),
         )
@@ -198,6 +232,40 @@ def get_stats(db_path: Optional[str | Path] = None) -> dict[str, Any]:
             "avg_tokens": round(avg_tokens or 0, 2),
             "by_agent": by_agent,
             "by_domain": by_domain,
+        }
+    finally:
+        conn.close()
+
+
+def get_cost_summary(db_path: Optional[str | Path] = None) -> dict[str, Any]:
+    """Return total cost and cost breakdowns by agent and model."""
+    conn = _connect(db_path)
+    try:
+        cur = conn.cursor()
+        total_cost = cur.execute(
+            "SELECT COALESCE(SUM(token_cost_usd), 0.0) FROM interactions"
+        ).fetchone()[0]
+
+        by_agent = {
+            row[0]: round(row[1], 6)
+            for row in cur.execute(
+                "SELECT agent_name, COALESCE(SUM(token_cost_usd), 0.0) "
+                "FROM interactions GROUP BY agent_name"
+            ).fetchall()
+        }
+
+        by_model = {
+            row[0]: round(row[1], 6)
+            for row in cur.execute(
+                "SELECT model_name, COALESCE(SUM(token_cost_usd), 0.0) "
+                "FROM interactions GROUP BY model_name"
+            ).fetchall()
+        }
+
+        return {
+            "total_cost_usd": round(total_cost, 6),
+            "by_agent": by_agent,
+            "by_model": by_model,
         }
     finally:
         conn.close()

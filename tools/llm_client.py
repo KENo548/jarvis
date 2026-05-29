@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import sys
 import time
 import urllib.request
@@ -157,23 +158,85 @@ def _fallback_provider() -> Provider:
     )
 
 # ---------------------------------------------------------------------------
+# Error taxonomy
+# ---------------------------------------------------------------------------
+
+class LLMError(Exception):
+    """Base class for LLM client errors."""
+
+class LLMTimeoutError(LLMError):
+    """Request timed out."""
+
+class LLMRateLimitError(LLMError):
+    """Rate limited (HTTP 429)."""
+
+class LLMProviderError(LLMError):
+    """Non-retryable HTTP error from the provider."""
+
+class LLMParseError(LLMError):
+    """Invalid or unparseable response from the provider."""
+
+
+# ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
 def _http_post(url: str, data: dict, headers: dict | None = None,
-               timeout: int = 120) -> dict:
-    """POST JSON, return parsed response."""
+               timeout: int = 120, max_retries: int = 3) -> dict:
+    """POST JSON, return parsed response. Retries on connection errors and 5xx."""
     body = json.dumps(data).encode()
     hdrs = {"Content-Type": "application/json"}
     if headers:
         hdrs.update(headers)
-    req = urllib.request.Request(url, data=body, headers=hdrs, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode() if e.fp else ""
-        raise RuntimeError(f"HTTP {e.code}: {error_body[:500]}") from e
+
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        req = urllib.request.Request(url, data=body, headers=hdrs, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode() if e.fp else ""
+            if e.code == 429:
+                raise LLMRateLimitError(f"HTTP 429: {error_body[:500]}") from e
+            if 400 <= e.code < 500:
+                raise LLMProviderError(f"HTTP {e.code}: {error_body[:500]}") from e
+            # 5xx — retryable
+            last_exc = LLMProviderError(f"HTTP {e.code}: {error_body[:500]}")
+        except urllib.error.URLError as e:
+            last_exc = LLMTimeoutError(f"Connection error: {e.reason}")
+        except TimeoutError:
+            last_exc = LLMTimeoutError("Request timed out")
+        except OSError as e:
+            last_exc = LLMTimeoutError(f"Network error: {e}")
+
+        if attempt < max_retries - 1:
+            backoff = (2 ** attempt) + random.uniform(0, 0.5)
+            time.sleep(backoff)
+
+    raise last_exc or LLMProviderError("All retries exhausted")
+
+# ---------------------------------------------------------------------------
+# Cost tables
+# ---------------------------------------------------------------------------
+
+COST_TABLE: dict[str, tuple[float, float]] = {
+    # model_prefix: (input_cost_per_1m, output_cost_per_1m)
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4o": (2.50, 10.00),
+}
+
+def _compute_cost(provider_name: str, tokens: dict) -> float:
+    """Compute cost in USD based on provider and token usage. $0 for local/free."""
+    if "ollama" in provider_name or "nvidia" in provider_name:
+        return 0.0
+    for prefix, (in_cost, out_cost) in COST_TABLE.items():
+        if prefix in provider_name:
+            prompt_t = tokens.get("prompt_tokens", 0)
+            completion_t = tokens.get("completion_tokens", 0)
+            return (prompt_t * in_cost + completion_t * out_cost) / 1_000_000
+    return 0.0
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -187,6 +250,7 @@ class LLMResponse:
     latency_ms: int
     token_usage: dict  # {"prompt_tokens": N, "completion_tokens": N, "total": N}
     raw: dict | None = None
+    cost_usd: float = 0.0
 
 def llm_call(
     prompt: str,
@@ -261,6 +325,7 @@ def llm_call(
         }
 
     latency = int((time.time() - t0) * 1000)
+    cost = _compute_cost(provider.name, tokens)
     return LLMResponse(
         text=text,
         model=provider.model,
@@ -268,6 +333,7 @@ def llm_call(
         latency_ms=latency,
         token_usage=tokens,
         raw=resp,
+        cost_usd=cost,
     )
 
 
@@ -306,6 +372,7 @@ def llm_chat(
     }
     latency = int((time.time() - t0) * 1000)
 
+    cost = _compute_cost(provider.name, tokens)
     return LLMResponse(
         text=text,
         model=provider.model,
@@ -313,11 +380,12 @@ def llm_chat(
         latency_ms=latency,
         token_usage=tokens,
         raw=resp,
+        cost_usd=cost,
     )
 
 
 def list_providers() -> list[dict]:
-    """Return available providers with status."""
+    """Return available providers with status and cost info."""
     result = []
     for p in PROVIDERS:
         online = False
@@ -329,12 +397,22 @@ def list_providers() -> list[dict]:
                 online = True   # cloud provider with key = assume available
         except Exception:
             pass
+
+        cost_in = 0.0
+        cost_out = 0.0
+        for prefix, (ci, co) in COST_TABLE.items():
+            if prefix in p.name:
+                cost_in, cost_out = ci, co
+                break
+
         result.append({
             "name": p.name,
             "model": p.model,
             "priority": p.priority,
             "online": online,
             "type": "local" if "localhost" in p.base_url else "cloud",
+            "cost_per_1m_input": cost_in,
+            "cost_per_1m_output": cost_out,
         })
     return result
 
@@ -363,7 +441,7 @@ if __name__ == "__main__":
 
     if args.cmd == "call":
         r = llm_call(args.prompt, model=args.model, system=args.system)
-        print(f"[{r.provider}] ({r.latency_ms}ms, {r.token_usage.get('total',0)} tokens)")
+        print(f"[{r.provider}] ({r.latency_ms}ms, {r.token_usage.get('total',0)} tokens, ${r.cost_usd:.6f})")
         print(r.text)
 
     elif args.cmd == "chat":
@@ -375,13 +453,14 @@ if __name__ == "__main__":
             else:
                 msgs.append({"role": "user", "content": m})
         r = llm_chat(msgs, model=args.model)
-        print(f"[{r.provider}] ({r.latency_ms}ms, {r.token_usage.get('total',0)} tokens)")
+        print(f"[{r.provider}] ({r.latency_ms}ms, {r.token_usage.get('total',0)} tokens, ${r.cost_usd:.6f})")
         print(r.text)
 
     elif args.cmd == "providers":
         for p in list_providers():
             status = "OK" if p["online"] else "--"
-            print(f"  {status} {p['name']:45s}  {p['type']:5s}  pri={p['priority']}")
+            cost_str = f"${p['cost_per_1m_input']:.2f}/${p['cost_per_1m_output']:.2f}" if p['cost_per_1m_input'] > 0 else "free"
+            print(f"  {status} {p['name']:45s}  {p['type']:5s}  pri={p['priority']}  cost={cost_str}")
 
     else:
         parser.print_help()

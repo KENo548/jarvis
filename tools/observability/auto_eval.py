@@ -14,6 +14,24 @@ except ImportError:
 
 from .interaction_logger import get_interaction, _connect
 
+SCORE_THRESHOLDS: dict[str, float] = {
+    "excellent": 0.85,
+    "good": 0.65,
+    "mediocre": 0.45,
+    # anything < 0.45 is "poor"
+}
+
+
+def _score_label(score: float) -> str:
+    """Map a numeric score to a human label."""
+    if score >= SCORE_THRESHOLDS["excellent"]:
+        return "excellent"
+    if score >= SCORE_THRESHOLDS["good"]:
+        return "good"
+    if score >= SCORE_THRESHOLDS["mediocre"]:
+        return "mediocre"
+    return "poor"
+
 JUDGE_PROMPT = """You are an impartial evaluator for AI agent responses. Score the following interaction on each dimension from 0.0 to 1.0.
 
 Interaction details:
@@ -83,6 +101,76 @@ def evaluate(
         return _fallback_eval()
     except Exception:
         return _fallback_eval()
+
+
+def human_override(
+    evaluation_id: str,
+    override_score: float,
+    override_reason: str = "",
+    db_path: Optional[str | Path] = None,
+) -> dict[str, Any]:
+    """Manually override an evaluation score.
+
+    Stores the override in the auto_eval JSON under a ``human_override`` key
+    and updates ``success_score`` on the interaction row.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT auto_eval FROM interactions WHERE interaction_id = ?",
+            (evaluation_id,),
+        ).fetchone()
+        if not row:
+            return {"error": f"interaction {evaluation_id} not found"}
+
+        existing = json.loads(row["auto_eval"] or "{}")
+        existing["human_override"] = {
+            "score": override_score,
+            "label": _score_label(override_score),
+            "reason": override_reason,
+        }
+
+        conn.execute(
+            "UPDATE interactions SET auto_eval = ?, success_score = ? WHERE interaction_id = ?",
+            (json.dumps(existing), override_score, evaluation_id),
+        )
+        conn.commit()
+        return existing
+    finally:
+        conn.close()
+
+
+def get_evaluation_stats(
+    db_path: Optional[str | Path] = None,
+) -> dict[str, Any]:
+    """Return distribution of evaluation scores and quality percentages."""
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute("SELECT success_score FROM interactions").fetchall()
+        total = len(rows)
+        if total == 0:
+            return {
+                "total": 0,
+                "distribution": {"excellent": 0, "good": 0, "mediocre": 0, "poor": 0},
+                "percentages": {"excellent": 0.0, "good": 0.0, "mediocre": 0.0, "poor": 0.0},
+                "avg_score": 0.0,
+            }
+
+        counts: dict[str, int] = {"excellent": 0, "good": 0, "mediocre": 0, "poor": 0}
+        total_score = 0.0
+        for row in rows:
+            s = row[0] or 0.0
+            total_score += s
+            counts[_score_label(s)] += 1
+
+        return {
+            "total": total,
+            "distribution": counts,
+            "percentages": {k: round(v / total * 100, 2) for k, v in counts.items()},
+            "avg_score": round(total_score / total, 4),
+        }
+    finally:
+        conn.close()
 
 
 def _parse_scores(content: str) -> dict[str, Any] | None:

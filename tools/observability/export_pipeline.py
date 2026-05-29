@@ -161,3 +161,103 @@ def _score_to_label(score: float) -> str:
     elif score >= 0.3:
         return "mediocre"
     return "bad"
+
+
+# ---------------------------------------------------------------------------
+# JSONL validation
+# ---------------------------------------------------------------------------
+
+REQUIRED_FIELDS = {"instruction", "input", "output", "domain", "agent"}
+
+
+def validate_jsonl(file_path: str | Path) -> list[dict[str, Any]]:
+    """Validate every line in a JSONL file. Returns list of error dicts."""
+    errors: list[dict[str, Any]] = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as e:
+                errors.append({"line": line_num, "error": f"Invalid JSON: {e}"})
+                continue
+            missing = REQUIRED_FIELDS - set(record.keys())
+            if missing:
+                errors.append({"line": line_num, "error": f"Missing fields: {sorted(missing)}"})
+    return errors
+
+
+def get_validation_report(file_path: str | Path) -> dict[str, Any]:
+    """Return full validation report for a JSONL file."""
+    total = 0
+    valid = 0
+    invalid = 0
+    missing_field_counts: dict[str, int] = {}
+    domain_dist: dict[str, int] = {}
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            total += 1
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                invalid += 1
+                continue
+            missing = REQUIRED_FIELDS - set(record.keys())
+            if missing:
+                invalid += 1
+                for field in missing:
+                    missing_field_counts[field] = missing_field_counts.get(field, 0) + 1
+            else:
+                valid += 1
+                domain = record.get("domain", "unknown")
+                domain_dist[domain] = domain_dist.get(domain, 0) + 1
+
+    return {
+        "total_lines": total,
+        "valid": valid,
+        "invalid": invalid,
+        "missing_fields": missing_field_counts,
+        "domain_distribution": domain_dist,
+    }
+
+
+def create_correction_pairs(
+    file_path: str | Path,
+    output_path: str | Path,
+) -> dict[str, Any]:
+    """Filter raw export to records with corrections and write clean JSONL."""
+    written = 0
+    skipped = 0
+    with open(file_path, "r", encoding="utf-8") as fin, \
+         open(output_path, "w", encoding="utf-8") as fout:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                skipped += 1
+                continue
+            correction = record.get("correction", "")
+            if not correction:
+                skipped += 1
+                continue
+            pair = {
+                "instruction": record.get("instruction", ""),
+                "input": record.get("input", ""),
+                "incorrect_output": record.get("output", ""),
+                "correction": correction,
+                "domain": record.get("domain", ""),
+                "agent": record.get("agent", ""),
+            }
+            fout.write(json.dumps(pair, ensure_ascii=False) + "\n")
+            written += 1
+
+    return {"written": written, "skipped": skipped, "output_path": str(output_path)}
