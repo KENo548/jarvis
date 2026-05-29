@@ -60,7 +60,7 @@ def plan_tool_usage(task_description: str, available_tools: list = None, model: 
     """
     tools = available_tools or ["shell_command", "file_read", "file_write", "web_search", "api_call", "docker_exec"]
 
-    prompt = f"Plan the tool usage for this task:\n\n{task_description}\n\nAvailable tools: {', '.join(tools)}"
+    prompt = f"Plan the tool usage for this task:\n\n{task_description}\n\nAvailable tools: {', '.join(tools)}\n\nIf the task is vague or doesn't need tools, respond with empty tool_calls and a helpful response in the 'response' field."
 
     response = llm_call(
         prompt=prompt,

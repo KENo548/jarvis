@@ -109,19 +109,42 @@ def process_task(task_text: str) -> str:
     # 2. Dispatch to the right agent
     if agent == "planner":
         result = create_plan(task_text)
-        response = f"Plan: {len(result.get('steps', []))} steps created."
+        steps = result.get("steps", [])
+        summary = result.get("summary", "")
+
+        if steps:
+            response = f"Here's my plan:\n\n"
+            for s in steps:
+                step_num = s.get("step", "?")
+                desc = s.get("description", "No description")
+                response += f"  {step_num}. {desc}\n"
+            if summary:
+                response += f"\n{summary}"
+        else:
+            response = "I can help you plan that. Could you provide more details about what you'd like to accomplish?"
     elif agent == "engineer":
         result = generate_code(task_text)
-        response = result.get("explanation", "Code generated.")
+        explanation = result.get("explanation", "Code generated.")
+        code = result.get("code", "")
+        language = result.get("language", "python")
+
+        if code:
+            response = f"{explanation}\n\n```{language}\n{code}\n```"
+        else:
+            response = explanation
     elif agent == "researcher":
         result = research_topic(task_text)
-        # Extract full summary, not just first line
+        # Extract full summary
         summary = result.get("summary", "Research complete.")
         key_findings = result.get("key_findings", [])
+        sources = result.get("sources", [])
+
+        # Build full response
+        response = summary
         if key_findings:
-            response = f"{summary}\n\nKey findings:\n" + "\n".join(f"• {f}" for f in key_findings)
-        else:
-            response = summary
+            response += "\n\nKey findings:\n" + "\n".join(f"  \u2022 {f}" for f in key_findings)
+        if sources:
+            response += "\n\nSources:\n" + "\n".join(f"  \u2022 {s}" for s in sources)
     elif agent == "memory_coordinator":
         result = coordinate_memory(task_text)
         # Actually execute memory updates
@@ -150,30 +173,39 @@ def process_task(task_text: str) -> str:
     else:
         result = plan_tool_usage(task_text)
         tool_calls = result.get("tool_calls", [])
+        tool_response = result.get("response", "")
 
-        # Execute tool calls with approval gates
-        executed = []
-        for tc in tool_calls:
-            tool_name = tc.get("tool", "")
-            params = tc.get("params", {})
+        # If no tools needed and there's a response, use it
+        if not tool_calls and tool_response:
+            response = tool_response
+        else:
+            # Execute tool calls with approval gates
+            executed = []
+            for tc in tool_calls:
+                tool_name = tc.get("tool", "")
+                params = tc.get("params", {})
 
-            # Route through safe wrappers for HIGH-risk tools
-            if tool_name == "file_controller" and safe_file_operation:
-                exec_result = safe_file_operation(params)
-            elif tool_name == "computer_control" and safe_computer_action:
-                exec_result = safe_computer_action(params)
-            elif tool_name == "computer_settings" and safe_system_setting:
-                exec_result = safe_system_setting(params)
+                # Route through safe wrappers for HIGH-risk tools
+                if tool_name == "file_controller" and safe_file_operation:
+                    exec_result = safe_file_operation(params)
+                elif tool_name == "computer_control" and safe_computer_action:
+                    exec_result = safe_computer_action(params)
+                elif tool_name == "computer_settings" and safe_system_setting:
+                    exec_result = safe_system_setting(params)
+                else:
+                    # LOW/MEDIUM risk tools execute directly
+                    exec_result = {"tool": tool_name, "status": "executed", "params": params}
+
+                executed.append(exec_result)
+
+            if executed:
+                purpose_list = [f"{e.get('tool', 'tool')} ({e.get('status', 'done')})" for e in executed]
+                response = f"Completed: {', '.join(purpose_list)}"
+                if any(e.get("needs_approval") for e in executed):
+                    pending = [e for e in executed if e.get("needs_approval")]
+                    response += f" {len(pending)} awaiting approval."
             else:
-                # LOW/MEDIUM risk tools execute directly
-                exec_result = {"tool": tool_name, "status": "executed", "params": params}
-
-            executed.append(exec_result)
-
-        response = f"Executed {len(executed)} tool call(s)."
-        if any(e.get("needs_approval") for e in executed):
-            pending = [e for e in executed if e.get("needs_approval")]
-            response += f" {len(pending)} awaiting approval."
+                response = "No tools were needed for this task."
 
     latency = int((time.time() - t0) * 1000)
 

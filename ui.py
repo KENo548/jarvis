@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""SAGE UI — PyQt6 interface for the cognitive operating system.
-
-Features:
-- Dark theme with blue accents (Mark XXXIX style)
-- Chat interface with message history
-- Voice input (microphone) and output (TTS)
-- System metrics display
-- Tool execution feedback
-"""
+"""SAGE UI — Golden Ratio + Old Money aesthetic PyQt6 interface."""
 
 from __future__ import annotations
 
@@ -20,41 +12,60 @@ from pathlib import Path
 import psutil
 
 from PyQt6.QtCore import (
-    QEasingCurve, QRectF, Qt, QTimer, QUrl, pyqtSignal,
+    QRectF, Qt, QTimer, QUrl, pyqtSignal, QObject,
 )
 from PyQt6.QtGui import (
-    QBrush, QColor, QFont, QLinearGradient, QPainter, QPen, QPixmap,
+    QColor, QFont, QLinearGradient, QPainter, QPen,
 )
 from PyQt6.QtWidgets import (
     QApplication, QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
+    QMainWindow, QPushButton, QScrollArea, QSizePolicy,
     QVBoxLayout, QWidget, QProgressBar,
 )
 
 # ---------------------------------------------------------------------------
-# Colors (Mark XXXIX style)
+# Golden Ratio Old Money Palette
 # ---------------------------------------------------------------------------
+# Golden Ratio: 1 : 1.618
+# Old Money: navy, cream, gold, understated elegance
+
+PHI = 1.618
 
 class C:
-    BG        = "#00060a"
-    PANEL     = "#010d14"
-    PANEL2    = "#010f18"
-    BORDER    = "#0d3347"
-    BORDER_B  = "#1a5c7a"
-    BORDER_A  = "#0f4060"
-    PRI       = "#00d4ff"
-    PRI_DIM   = "#007a99"
-    PRI_GHO   = "#001f2e"
-    ACC       = "#ff6b00"
-    GREEN     = "#00ff88"
-    GREEN_D   = "#00aa55"
-    RED       = "#ff3355"
-    TEXT      = "#8ffcff"
-    TEXT_DIM  = "#3a8a9a"
-    TEXT_MED  = "#5ab8cc"
-    WHITE     = "#d8f8ff"
-    DARK      = "#000d14"
-    BAR_BG    = "#011520"
+    # Backgrounds — deep navy, almost black
+    BG         = "#0a0e14"
+    PANEL      = "#0f1520"
+    PANEL2     = "#141c28"
+    SURFACE    = "#1a2332"
+
+    # Borders — subtle gold/cream
+    BORDER     = "#2a3a4e"
+    BORDER_F   = "#c9a962"   # Gold accent (old money)
+    BORDER_S   = "#8b7d5e"   # Muted gold
+
+    # Primary — warm gold (old money, not neon)
+    PRI        = "#c9a962"
+    PRI_DIM    = "#8b7d5e"
+    PRI_GHO    = "#1a1f14"
+
+    # Accent — deep burgundy
+    ACC        = "#8b2252"
+    ACC2       = "#c9a962"
+
+    # Status
+    GREEN      = "#4a7c59"
+    GREEN_D    = "#2d5a3a"
+    RED        = "#8b3a3a"
+
+    # Text — cream/ivory tones
+    TEXT       = "#e8dcc8"    # Warm ivory
+    TEXT_DIM   = "#6b7d8e"
+    TEXT_MED   = "#9ba8b4"
+    WHITE      = "#f5f0e8"    # Warm white
+    DARK       = "#060810"
+
+    # Bars
+    BAR_BG     = "#0c1018"
 
 
 def qcol(h: str, a: int = 255) -> QColor:
@@ -64,12 +75,10 @@ def qcol(h: str, a: int = 255) -> QColor:
 
 
 # ---------------------------------------------------------------------------
-# System Metrics
+# System Metrics (background thread)
 # ---------------------------------------------------------------------------
 
 class SysMetrics:
-    """Background thread that collects CPU, memory, network stats."""
-
     def __init__(self):
         self.cpu = 0.0
         self.mem = 0.0
@@ -103,66 +112,91 @@ class SysMetrics:
 
 
 # ---------------------------------------------------------------------------
-# Message Bubble
+# Golden Ratio Helpers
+# ---------------------------------------------------------------------------
+
+def phi_scale(base: float) -> int:
+    """Scale a dimension by golden ratio."""
+    return int(base * PHI)
+
+def phi_split(total: int) -> tuple[int, int]:
+    """Split total into golden ratio parts."""
+    small = int(total / PHI)
+    return total - small, small
+
+
+# ---------------------------------------------------------------------------
+# Message Bubble — Old Money Style
 # ---------------------------------------------------------------------------
 
 class MessageBubble(QFrame):
-    """A single chat message bubble."""
-
     def __init__(self, text: str, is_user: bool = True, parent=None):
         super().__init__(parent)
         self.is_user = is_user
         self._setup_ui(text)
 
     def _setup_ui(self, text: str):
+        if self.is_user:
+            bg = C.SURFACE
+            border = C.BORDER
+            sender_color = C.PRI
+            sender_text = "You"
+        else:
+            bg = C.PRI_GHO
+            border = C.BORDER_F
+            sender_color = C.GREEN
+            sender_text = "Sage"
+
         self.setStyleSheet(f"""
             QFrame {{
-                background: {C.PANEL2 if self.is_user else C.PRI_GHO};
-                border: 1px solid {C.BORDER if self.is_user else C.BORDER_B};
-                border-radius: 12px;
-                padding: 12px;
-                margin: 4px 8px;
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: 4px;
+                padding: 14px 18px;
+                margin: 4px 0;
             }}
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setContentsMargins(16, 10, 16, 10)
+        layout.setSpacing(6)
 
-        # Sender label
-        sender = QLabel("You" if self.is_user else "Sage")
+        # Sender — small caps, elegant
+        sender = QLabel(sender_text)
         sender.setStyleSheet(f"""
-            color: {C.PRI if self.is_user else C.GREEN};
-            font-size: 11px;
-            font-weight: bold;
+            color: {sender_color};
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             border: none;
             background: transparent;
         """)
         layout.addWidget(sender)
 
-        # Message text
+        # Message — warm ivory, serif-like
         msg = QLabel(text)
         msg.setWordWrap(True)
         msg.setStyleSheet(f"""
             color: {C.WHITE};
             font-size: 14px;
+            line-height: 1.5;
             border: none;
             background: transparent;
-            padding: 4px 0;
+            padding: 2px 0;
         """)
         layout.addWidget(msg)
 
 
 # ---------------------------------------------------------------------------
-# System Metrics Bar
+# System Metrics Bar — Old Money
 # ---------------------------------------------------------------------------
 
 class MetricsBar(QFrame):
-    """Displays CPU, memory, network stats."""
-
     def __init__(self, metrics: SysMetrics, parent=None):
         super().__init__(parent)
         self.metrics = metrics
-        self.setFixedHeight(36)
+        self.setFixedHeight(32)
         self.setStyleSheet(f"""
             QFrame {{
                 background: {C.BAR_BG};
@@ -171,14 +205,14 @@ class MetricsBar(QFrame):
         """)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 4, 16, 4)
-        layout.setSpacing(24)
+        layout.setContentsMargins(24, 4, 24, 4)
+        layout.setSpacing(32)
 
-        self.cpu_label = self._make_label("CPU")
-        self.cpu_bar = self._make_bar()
-        self.mem_label = self._make_label("MEM")
-        self.mem_bar = self._make_bar()
-        self.net_label = self._make_label("NET")
+        self.cpu_label = self._label("CPU")
+        self.cpu_bar = self._bar()
+        self.mem_label = self._label("MEM")
+        self.mem_bar = self._bar()
+        self.net_label = self._label("NET")
 
         layout.addWidget(self.cpu_label)
         layout.addWidget(self.cpu_bar)
@@ -187,30 +221,29 @@ class MetricsBar(QFrame):
         layout.addWidget(self.net_label)
         layout.addStretch()
 
-        # Update timer
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update)
         self._timer.start(2000)
 
-    def _make_label(self, text: str) -> QLabel:
+    def _label(self, text: str) -> QLabel:
         label = QLabel(text)
-        label.setStyleSheet(f"color: {C.TEXT_DIM}; font-size: 11px; border: none; background: transparent;")
+        label.setStyleSheet(f"color: {C.TEXT_DIM}; font-size: 10px; border: none; background: transparent; letter-spacing: 1px;")
         return label
 
-    def _make_bar(self) -> QProgressBar:
+    def _bar(self) -> QProgressBar:
         bar = QProgressBar()
         bar.setFixedWidth(80)
-        bar.setFixedHeight(8)
+        bar.setFixedHeight(6)
         bar.setTextVisible(False)
         bar.setStyleSheet(f"""
             QProgressBar {{
                 background: {C.DARK};
                 border: 1px solid {C.BORDER};
-                border-radius: 4px;
+                border-radius: 3px;
             }}
             QProgressBar::chunk {{
-                background: {C.PRI};
-                border-radius: 3px;
+                background: {C.PRI_DIM};
+                border-radius: 2px;
             }}
         """)
         return bar
@@ -218,35 +251,38 @@ class MetricsBar(QFrame):
     def _update(self):
         self.cpu_bar.setValue(int(self.metrics.cpu))
         self.mem_bar.setValue(int(self.metrics.mem))
-        up = self.metrics.net_up
-        down = self.metrics.net_down
-        self.net_label.setText(f"NET ↑{up:.0f} ↓{down:.0f} KB/s")
+        self.net_label.setText(f"NET \u2191{self.metrics.net_up:.0f} \u2193{self.metrics.net_down:.0f} KB/s")
 
 
 # ---------------------------------------------------------------------------
-# Main Window
+# Main Window — Old Money Elegance
 # ---------------------------------------------------------------------------
 
 class SageUI(QMainWindow):
-    """Main SAGE interface."""
-
-    user_message = pyqtSignal(str)
+    # Signals for thread-safe UI updates
+    response_ready = pyqtSignal(str)
+    system_msg_ready = pyqtSignal(str)
+    voice_status_ready = pyqtSignal(str)
 
     def __init__(self, process_fn=None):
         super().__init__()
         self.process_fn = process_fn
         self.metrics = SysMetrics()
         self._voice_active = False
+        self._processing = False
 
-        self.setWindowTitle("SAGE — Cognitive Operating System")
+        # Connect signals
+        self.response_ready.connect(self._on_response)
+        self.system_msg_ready.connect(self._on_system_msg)
+        self.voice_status_ready.connect(self._on_voice_status)
+
+        self.setWindowTitle("SAGE")
         self.setMinimumSize(900, 650)
         self.resize(1000, 700)
 
         self._setup_ui()
-        self.user_message.connect(self._on_user_message)
 
     def _setup_ui(self):
-        # Central widget
         central = QWidget()
         central.setStyleSheet(f"background: {C.BG};")
         self.setCentralWidget(central)
@@ -273,7 +309,7 @@ class SageUI(QMainWindow):
 
     def _make_header(self) -> QFrame:
         header = QFrame()
-        header.setFixedHeight(56)
+        header.setFixedHeight(60)
         header.setStyleSheet(f"""
             QFrame {{
                 background: {C.PANEL};
@@ -282,35 +318,37 @@ class SageUI(QMainWindow):
         """)
 
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(20, 0, 20, 0)
+        layout.setContentsMargins(28, 0, 28, 0)
 
-        # Title
+        # Title — elegant, spaced
         title = QLabel("SAGE")
         title.setStyleSheet(f"""
             color: {C.PRI};
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 3px;
+            font-size: 20px;
+            font-weight: 300;
+            letter-spacing: 8px;
         """)
         layout.addWidget(title)
+
+        # Thin gold line separator
+        sep = QLabel("\u2014")
+        sep.setStyleSheet(f"color: {C.BORDER_F}; font-size: 16px; margin: 0 12px; border: none; background: transparent;")
+        layout.addWidget(sep)
 
         # Subtitle
         subtitle = QLabel("Cognitive Operating System")
         subtitle.setStyleSheet(f"""
             color: {C.TEXT_DIM};
-            font-size: 12px;
-            margin-left: 12px;
+            font-size: 11px;
+            letter-spacing: 1px;
         """)
         layout.addWidget(subtitle)
 
         layout.addStretch()
 
         # Status
-        status = QLabel("● Online")
-        status.setStyleSheet(f"""
-            color: {C.GREEN};
-            font-size: 12px;
-        """)
+        status = QLabel("\u25cf Online")
+        status.setStyleSheet(f"color: {C.GREEN}; font-size: 11px; letter-spacing: 1px;")
         layout.addWidget(status)
 
         return header
@@ -322,7 +360,6 @@ class SageUI(QMainWindow):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Scroll area for messages
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setStyleSheet(f"""
@@ -332,12 +369,12 @@ class SageUI(QMainWindow):
             }}
             QScrollBar:vertical {{
                 background: {C.DARK};
-                width: 8px;
-                border-radius: 4px;
+                width: 6px;
+                border-radius: 3px;
             }}
             QScrollBar::handle:vertical {{
                 background: {C.BORDER};
-                border-radius: 4px;
+                border-radius: 3px;
                 min-height: 30px;
             }}
             QScrollBar::handle:vertical:hover {{
@@ -348,24 +385,23 @@ class SageUI(QMainWindow):
             }}
         """)
 
-        # Messages container
         self.messages_widget = QWidget()
         self.messages_layout = QVBoxLayout(self.messages_widget)
-        self.messages_layout.setContentsMargins(20, 16, 20, 16)
+        self.messages_layout.setContentsMargins(28, 20, 28, 20)
         self.messages_layout.setSpacing(8)
         self.messages_layout.addStretch()
 
         self.scroll.setWidget(self.messages_widget)
         layout.addWidget(self.scroll)
 
-        # Welcome message
-        self._add_system_message("Welcome to Sage. Type a message or click the microphone to speak.")
+        # Welcome
+        self._add_system_msg("How may I assist you today?")
 
         return container
 
     def _make_input_area(self) -> QFrame:
         container = QFrame()
-        container.setFixedHeight(72)
+        container.setFixedHeight(76)
         container.setStyleSheet(f"""
             QFrame {{
                 background: {C.PANEL};
@@ -374,8 +410,8 @@ class SageUI(QMainWindow):
         """)
 
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(12)
+        layout.setContentsMargins(24, 14, 24, 14)
+        layout.setSpacing(14)
 
         # Text input
         self.input_field = QLineEdit()
@@ -385,49 +421,40 @@ class SageUI(QMainWindow):
                 background: {C.DARK};
                 color: {C.WHITE};
                 border: 1px solid {C.BORDER};
-                border-radius: 8px;
-                padding: 10px 16px;
+                border-radius: 4px;
+                padding: 11px 18px;
                 font-size: 14px;
             }}
             QLineEdit:focus {{
-                border-color: {C.PRI};
+                border-color: {C.BORDER_F};
             }}
         """)
         self.input_field.returnPressed.connect(self._send_message)
         layout.addWidget(self.input_field, 1)
 
         # Voice button
-        self.voice_btn = QPushButton("🎤")
+        self.voice_btn = QPushButton("\U0001f3a4")
         self.voice_btn.setFixedSize(44, 44)
-        self.voice_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: {C.DARK};
-                border: 1px solid {C.BORDER};
-                border-radius: 22px;
-                font-size: 18px;
-            }}
-            QPushButton:hover {{
-                border-color: {C.PRI};
-                background: {C.PRI_GHO};
-            }}
-        """)
+        self.voice_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._voice_style_normal()
         self.voice_btn.clicked.connect(self._toggle_voice)
         layout.addWidget(self.voice_btn)
 
         # Send button
-        self.send_btn = QPushButton("→")
+        self.send_btn = QPushButton("\u2192")
         self.send_btn.setFixedSize(44, 44)
+        self.send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.send_btn.setStyleSheet(f"""
             QPushButton {{
                 background: {C.PRI};
                 color: {C.DARK};
                 border: none;
-                border-radius: 22px;
+                border-radius: 4px;
                 font-size: 18px;
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background: {C.BORDER_B};
+                background: {C.BORDER_F};
             }}
         """)
         self.send_btn.clicked.connect(self._send_message)
@@ -435,17 +462,38 @@ class SageUI(QMainWindow):
 
         return container
 
-    def _add_message(self, text: str, is_user: bool):
-        """Add a message bubble to the chat."""
-        bubble = MessageBubble(text, is_user)
-        # Insert before the stretch
-        self.messages_layout.insertWidget(self.messages_layout.count() - 1, bubble)
+    def _voice_style_normal(self):
+        self.voice_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.DARK};
+                border: 1px solid {C.BORDER};
+                border-radius: 4px;
+                font-size: 18px;
+            }}
+            QPushButton:hover {{
+                border-color: {C.BORDER_F};
+                background: {C.PRI_GHO};
+            }}
+        """)
 
-        # Scroll to bottom
+    def _voice_style_active(self):
+        self.voice_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.ACC};
+                border: 1px solid {C.ACC};
+                border-radius: 4px;
+                font-size: 18px;
+            }}
+        """)
+
+    # --- Thread-safe message methods ---
+
+    def _add_message(self, text: str, is_user: bool):
+        bubble = MessageBubble(text, is_user)
+        self.messages_layout.insertWidget(self.messages_layout.count() - 1, bubble)
         QTimer.singleShot(50, self._scroll_to_bottom)
 
-    def _add_system_message(self, text: str):
-        """Add a system message (centered, muted)."""
+    def _add_system_msg(self, text: str):
         label = QLabel(text)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setWordWrap(True)
@@ -455,6 +503,7 @@ class SageUI(QMainWindow):
             padding: 16px;
             border: none;
             background: transparent;
+            letter-spacing: 0.5px;
         """)
         self.messages_layout.insertWidget(self.messages_layout.count() - 1, label)
 
@@ -462,20 +511,42 @@ class SageUI(QMainWindow):
         sb = self.scroll.verticalScrollBar()
         sb.setValue(sb.maximum())
 
+    # --- Slots connected to signals ---
+
+    def _on_response(self, response: str):
+        self._add_message(response, is_user=False)
+        self._processing = False
+        self.input_field.setEnabled(True)
+        self.send_btn.setEnabled(True)
+
+    def _on_system_msg(self, text: str):
+        self._add_system_msg(text)
+
+    def _on_voice_status(self, status: str):
+        if status == "listening":
+            self._add_system_msg("Listening... speak now")
+        elif status == "error":
+            self._add_system_msg("Could not understand. Please try again.")
+        elif status == "done":
+            pass
+
+    # --- User actions ---
+
     def _send_message(self):
-        """Handle send button or Enter key."""
         text = self.input_field.text().strip()
-        if not text:
+        if not text or self._processing:
             return
 
         self.input_field.clear()
         self._add_message(text, is_user=True)
 
-        # Process in background thread
+        self._processing = True
+        self.input_field.setEnabled(False)
+        self.send_btn.setEnabled(False)
+
         threading.Thread(target=self._process_in_background, args=(text,), daemon=True).start()
 
     def _process_in_background(self, text: str):
-        """Run Sage processing in background thread."""
         if self.process_fn:
             try:
                 response = self.process_fn(text)
@@ -484,78 +555,53 @@ class SageUI(QMainWindow):
         else:
             response = f"Echo: {text}"
 
-        # Emit signal to update UI from main thread
-        self.user_message.emit(response)
-
-    def _on_user_message(self, response: str):
-        """Handle response from background thread."""
-        self._add_message(response, is_user=False)
+        self.response_ready.emit(response)
 
     def _toggle_voice(self):
-        """Toggle voice input."""
         if self._voice_active:
             self._voice_active = False
-            self.voice_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {C.DARK};
-                    border: 1px solid {C.BORDER};
-                    border-radius: 22px;
-                    font-size: 18px;
-                }}
-                QPushButton:hover {{
-                    border-color: {C.PRI};
-                    background: {C.PRI_GHO};
-                }}
-            """)
+            self._voice_style_normal()
         else:
             self._voice_active = True
-            self.voice_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {C.RED};
-                    border: 1px solid {C.RED};
-                    border-radius: 22px;
-                    font-size: 18px;
-                }}
-            """)
-            # Start voice recording in background
+            self._voice_style_active()
             threading.Thread(target=self._voice_loop, daemon=True).start()
 
     def _voice_loop(self):
-        """Record audio, transcribe, process."""
         try:
             from embodiment.voice_io import record_audio, transcribe_with_whisper
-            self._add_system_message("Listening... speak now")
+
+            self.voice_status_ready.emit("listening")
             audio = record_audio(max_seconds=15)
+
             if audio is None:
-                self._add_system_message("No speech detected")
+                self.voice_status_ready.emit("error")
                 self._voice_active = False
+                self._voice_style_normal()
                 return
 
             text = transcribe_with_whisper(audio)
             if not text:
-                self._add_system_message("Could not understand audio")
+                self.voice_status_ready.emit("error")
                 self._voice_active = False
+                self._voice_style_normal()
                 return
 
-            self._add_message(text, is_user=True)
-            self.user_message.emit(self.process_fn(text) if self.process_fn else f"Echo: {text}")
+            # Emit signal to add user message on main thread
+            self.system_msg_ready.emit(f"You said: {text}")
+
+            # Process
+            if self.process_fn:
+                response = self.process_fn(text)
+            else:
+                response = f"Echo: {text}"
+
+            self.response_ready.emit(response)
 
         except Exception as e:
-            self._add_system_message(f"Voice error: {e}")
+            self.system_msg_ready.emit(f"Voice error: {e}")
         finally:
             self._voice_active = False
-            self.voice_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {C.DARK};
-                    border: 1px solid {C.BORDER};
-                    border-radius: 22px;
-                    font-size: 18px;
-                }}
-                QPushButton:hover {{
-                    border-color: {C.PRI};
-                    background: {C.PRI_GHO};
-                }}
-            """)
+            self._voice_style_normal()
 
     def closeEvent(self, event):
         self.metrics._running = False
@@ -567,12 +613,10 @@ class SageUI(QMainWindow):
 # ---------------------------------------------------------------------------
 
 def run_ui(process_fn=None):
-    """Launch the SAGE UI."""
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    # Global font
-    font = QFont("Segoe UI", 10)
+    font = QFont("Georgia", 10)  # Serif font — old money
     app.setFont(font)
 
     window = SageUI(process_fn=process_fn)

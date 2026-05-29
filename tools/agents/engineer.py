@@ -9,7 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from llm_client import llm_call
 
-SYSTEM_PROMPT = """You are the Engineer agent. Write clean, working Python code. When given a task, produce complete, runnable code. Include error handling. Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes. Format: {"code": "the python code with \\n", "language": "python", "explanation": "brief explanation", "files_affected": []}"""
+SYSTEM_PROMPT = """You are the Engineer agent. Write clean, working Python code. When given a task, produce complete, runnable code. Include error handling.
+
+IMPORTANT: Your explanation should be helpful and complete. Explain what the code does, how to use it, and any important notes.
+
+Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes. Format: {"code": "the python code with \\n", "language": "python", "explanation": "complete explanation of what the code does and how to use it", "files_affected": []}"""
 
 
 def _extract_json(text: str) -> dict:

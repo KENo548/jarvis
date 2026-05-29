@@ -9,7 +9,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from llm_client import llm_call
 
-SYSTEM_PROMPT = """You are the Planner agent. Break complex tasks into clear, sequential steps. Each step should be actionable and specific. Respond with ONLY JSON: {"steps": [{"step": 1, "description": "what to do", "agent": "which agent handles it", "dependencies": []}]} Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes."""
+SYSTEM_PROMPT = """You are the Planner agent. Break complex tasks into clear, sequential steps. Each step should be actionable and specific.
+
+IMPORTANT: Your response should be helpful and complete. Not just a list of steps, but a clear plan the user can follow.
+
+Respond with ONLY JSON: {"steps": [{"step": 1, "description": "what to do", "agent": "which agent handles it", "dependencies": []}], "summary": "brief summary of the plan"}
+Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes."""
 
 
 def _extract_json(text: str) -> dict:
