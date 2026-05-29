@@ -11,13 +11,18 @@ import os
 def call_llm(agent_name: str, prompt_template: str, model_name: str = None, session_id: str = None, workflow_id: str = None, prompt_version: str = None, capture_replay: bool = False):
     session_id = session_id or str(uuid.uuid4())
     workflow_id = workflow_id or "default"
-    # resolve model
-    resolved = resolve_model(model_name or 'local/default')
-    endpoint = resolved.get('endpoint')
-    model_tag = resolved.get('model') or resolved.get('runner')
+    # resolve model. If model_name is None, run in mock mode (no external endpoint)
+    if model_name is None:
+        endpoint = None
+        model_tag = 'mock'
+    else:
+        resolved = resolve_model(model_name or 'local/default')
+        endpoint = resolved.get('endpoint')
+        model_tag = resolved.get('model') or resolved.get('runner')
 
     # instantiate client
-    client = LLMClient(provider=resolved.get('runner', 'ollama'), endpoint=endpoint)
+    provider = resolved.get('runner', 'ollama') if model_name is not None else 'mock'
+    client = LLMClient(provider=provider, endpoint=endpoint)
 
     # if prompt_version references a registered prompt, fetch it
     try:

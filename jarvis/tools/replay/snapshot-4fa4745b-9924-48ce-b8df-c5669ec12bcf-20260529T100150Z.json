@@ -1,0 +1,13 @@
+{
+  "session_id": "4fa4745b-9924-48ce-b8df-c5669ec12bcf",
+  "workflow_id": "default",
+  "prompt_version": "v1",
+  "memory_snapshot": {
+    "prompt": "Create a replay snapshot for a mock run with prompt version v1 and tool_versions {llm: 'mock'}"
+  },
+  "tool_versions": {
+    "llm": "mock"
+  },
+  "orchestration_state": {},
+  "timestamp": "20260529T100150Z"
+}

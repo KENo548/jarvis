@@ -1,0 +1,13 @@
+{
+  "session_id": "e2aa10fc-ab95-4d5a-b886-981cb05272e6",
+  "workflow_id": "default",
+  "prompt_version": "v1",
+  "memory_snapshot": {
+    "prompt": "Summarize PHASE 0 and PHASE 1 from Downloads/kimi-2006.md into 8 bullets"
+  },
+  "tool_versions": {
+    "llm": "mock"
+  },
+  "orchestration_state": {},
+  "timestamp": "20260529T100149Z"
+}

@@ -1,0 +1,9 @@
+{
+  "labels": ["excellent","good","mediocre","poor"],
+  "thresholds": {
+    "excellent": 0.9,
+    "good": 0.7,
+    "mediocre": 0.4,
+    "poor": 0.0
+  }
+}
