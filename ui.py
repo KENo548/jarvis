@@ -568,7 +568,7 @@ class SageUI(QMainWindow):
 
     def _voice_loop(self):
         try:
-            from embodiment.voice_io import record_audio, transcribe_with_whisper
+            from embodiment.voice_io import record_audio, transcribe_whisper
 
             self.voice_status_ready.emit("listening")
             audio = record_audio(max_seconds=15)
@@ -579,7 +579,7 @@ class SageUI(QMainWindow):
                 self._voice_style_normal()
                 return
 
-            text = transcribe_with_whisper(audio)
+            text = transcribe_whisper(audio)
             if not text:
                 self.voice_status_ready.emit("error")
                 self._voice_active = False
