@@ -5,6 +5,7 @@ from jarvis.tools.interaction_logger import pii_redact, log_interaction
 from jarvis.tools.prompt_store.prompt_registry import register_prompt, get_prompt, diff_versions
 from jarvis.tools.replay.snapshot import capture_snapshot
 from jarvis.tools.export_pipeline import validate_jsonl, create_correction_pairs
+from jarvis.tools.llm_integration import call_llm
 
 
 def test_pii_redaction():
@@ -43,6 +44,12 @@ def test_llm_client_and_logging():
         cost_usd=res["cost_usd"],
     )
     assert rowid > 0
+
+
+def test_llm_integration_wrapper():
+    out = call_llm("tester", "say hi", model_name="local/default", session_id="s2", workflow_id="w2")
+    assert "interaction_id" in out
+    assert out["response"]["text"].startswith("[MOCK RESPONSE]")
 
 
 def test_snapshot_and_export(tmp_path):
