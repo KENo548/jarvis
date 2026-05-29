@@ -9,7 +9,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from llm_client import llm_call
 
-SYSTEM_PROMPT = """You are the Tool Operator. Given a task, determine which tools/commands are needed and produce the exact execution plan. Tools available: shell_command, file_read, file_write, web_search, api_call, docker_exec. Respond with ONLY JSON: {"tool_calls": [{"tool": "tool_name", "params": {}, "purpose": "why"}]} Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes."""
+SYSTEM_PROMPT = """You are the Tool Operator. Given a task, determine which tools/commands are needed and produce the exact execution plan.
+
+IMPORTANT RULES:
+- If the task is vague or unclear, ask for clarification instead of failing
+- If no tools are needed, respond with an empty tool_calls list
+- Always provide a helpful response even when no tools are needed
+
+Tools available: shell_command, file_read, file_write, web_search, api_call, docker_exec
+
+Respond with ONLY JSON: {"tool_calls": [{"tool": "tool_name", "params": {}, "purpose": "why"}], "response": "helpful message if no tools needed"}
+The "response" field is optional - use it when no tools are needed or to add context.
+Respond with ONLY valid JSON — no markdown, no code blocks. Use escaped newlines (\\n) in string values, never triple quotes."""
 
 
 def _extract_json(text: str) -> dict:

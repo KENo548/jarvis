@@ -81,6 +81,27 @@ def process_task(task_text: str) -> str:
     """Route a task through the SAGE agent pipeline."""
     t0 = time.time()
 
+    # Handle conversational inputs directly
+    lower = task_text.lower().strip()
+    conversational_triggers = ("hello", "hi ", "hey", "good morning", "good evening", "good afternoon", "how are you", "what's up", "sup")
+    if lower in ("hello", "hi", "hey") or lower.startswith(conversational_triggers):
+        response = "Hello! I'm Sage, your AI assistant. How can I help you today?"
+        # Still log it
+        log_interaction(
+            agent_name="commander",
+            input_text=task_text,
+            output_text=response,
+            model="conversational",
+            duration_ms=0,
+            session_id=SESSION_ID,
+            task_id=str(uuid.uuid4()),
+            memory_context_snapshot={},
+            tool_calls_made=[],
+            reasoning_trace="conversational greeting",
+            domain="conversational",
+        )
+        return response
+
     # 1. Commander routes the task
     route = route_task(task_text)
     agent = route.get("selected_agent", "tool_operator")
@@ -94,7 +115,13 @@ def process_task(task_text: str) -> str:
         response = result.get("explanation", "Code generated.")
     elif agent == "researcher":
         result = research_topic(task_text)
-        response = result.get("summary", "Research complete.")
+        # Extract full summary, not just first line
+        summary = result.get("summary", "Research complete.")
+        key_findings = result.get("key_findings", [])
+        if key_findings:
+            response = f"{summary}\n\nKey findings:\n" + "\n".join(f"• {f}" for f in key_findings)
+        else:
+            response = summary
     elif agent == "memory_coordinator":
         result = coordinate_memory(task_text)
         # Actually execute memory updates
@@ -265,6 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true", help="Run E2E verification")
     parser.add_argument("--providers", action="store_true", help="List LLM providers")
     parser.add_argument("--stats", action="store_true", help="Show interaction stats")
+    parser.add_argument("--ui", action="store_true", help="Launch PyQt6 GUI")
     args = parser.parse_args()
 
     if args.test:
@@ -279,5 +307,8 @@ if __name__ == "__main__":
         print(json.dumps(get_stats(), indent=2))
     elif args.voice:
         voice_mode()
+    elif args.ui:
+        from ui import run_ui
+        run_ui(process_fn=process_task)
     else:
         text_mode()
