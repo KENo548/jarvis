@@ -1,3 +1,39 @@
+# OLLAMA Runbook (minimal)
+
+Install & run
+
+1. Install Ollama per project instructions for your OS.
+2. Run the server locally and note the HTTP endpoint (e.g., `http://localhost:11434`).
+
+Auth & endpoints
+
+- Use API keys where available. Store keys in your secret store and never commit them.
+- Configure `LLMClient(endpoint=..., api_key=...)` in `jarvis/tools/llm_client.py`.
+
+Model management
+
+- Pin model versions for production runs. Record model name + SHA/version in prompts and replay snapshots.
+- Use prompt versioning and a controlled rollout (canary -> full) with rollback on regressions.
+
+Rate limits & timeouts
+
+- Set a conservative request timeout (e.g., 20–60s). Implement retries with exponential backoff (3 attempts recommended).
+- Monitor 429 rates and set alerts if they increase.
+
+Troubleshooting
+
+- 401: check API key and key rotation.
+- 429: implement spikes throttling and backoff.
+- 5xx: treat as transient, retry with backoff and alert on sustained failures.
+
+Observability
+
+- Record model_name, model_version, prompt_version, token usage, latency_ms and cost_usd per call.
+- Keep a local canary test suite of 5–10 calls to validate a deployed model version.
+
+Security
+
+- Redact PII before writing to logs. Rotate keys and enforce RBAC around logs and exports.
 # Ollama Operations Runbook
 
 ## Installation
