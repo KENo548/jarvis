@@ -263,6 +263,7 @@ class SageUI(QMainWindow):
     response_ready = pyqtSignal(str)
     system_msg_ready = pyqtSignal(str)
     voice_status_ready = pyqtSignal(str)
+    pipeline_ready = pyqtSignal(str, str, str)
 
     def __init__(self, process_fn=None):
         super().__init__()
@@ -275,6 +276,7 @@ class SageUI(QMainWindow):
         self.response_ready.connect(self._on_response)
         self.system_msg_ready.connect(self._on_system_msg)
         self.voice_status_ready.connect(self._on_voice_status)
+        self.pipeline_ready.connect(self._update_pipeline)
 
         self.setWindowTitle("SAGE")
         self.setMinimumSize(900, 650)
@@ -298,6 +300,10 @@ class SageUI(QMainWindow):
         # Metrics bar
         metrics_bar = MetricsBar(self.metrics)
         main_layout.addWidget(metrics_bar)
+
+        # Pipeline status bar
+        self.pipeline_bar = self._make_pipeline_bar()
+        main_layout.addWidget(self.pipeline_bar)
 
         # Chat area
         chat_widget = self._make_chat_area()
@@ -352,6 +358,43 @@ class SageUI(QMainWindow):
         layout.addWidget(status)
 
         return header
+
+    def _make_pipeline_bar(self) -> QFrame:
+        bar = QFrame()
+        bar.setFixedHeight(28)
+        bar.setStyleSheet(f"""
+            QFrame {{
+                background: {C.PANEL2};
+                border-bottom: 1px solid {C.BORDER};
+            }}
+        """)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(28, 2, 28, 2)
+        layout.setSpacing(20)
+
+        self.agent_label = QLabel("agent: idle")
+        self.agent_label.setStyleSheet(f"color: {C.PRI_DIM}; font-size: 10px; border: none; background: transparent;")
+        self.cmd_label = QLabel("")
+        self.cmd_label.setStyleSheet(f"color: {C.TEXT_DIM}; font-size: 10px; border: none; background: transparent;")
+        self.tool_label = QLabel("")
+        self.tool_label.setStyleSheet(f"color: {C.TEXT_DIM}; font-size: 10px; border: none; background: transparent;")
+
+        layout.addWidget(self.agent_label)
+        layout.addWidget(self.cmd_label)
+        layout.addWidget(self.tool_label)
+        layout.addStretch()
+
+        return bar
+
+    def _update_pipeline(self, agent: str = "", command: str = "", tool: str = ""):
+        if agent:
+            self.agent_label.setText(f"agent: {agent}")
+        if command:
+            self.cmd_label.setText(f"cmd: {command[:60]}")
+        if tool:
+            self.tool_label.setText(f"tool: {tool}")
+        elif tool == "":
+            self.tool_label.setText("")
 
     def _make_chat_area(self) -> QFrame:
         container = QFrame()
@@ -549,12 +592,15 @@ class SageUI(QMainWindow):
     def _process_in_background(self, text: str):
         if self.process_fn:
             try:
+                self.pipeline_ready.emit("routing", text[:60], "")
                 response = self.process_fn(text)
             except Exception as e:
                 response = f"Error: {e}"
+                self.pipeline_ready.emit("error", "", str(e)[:40])
         else:
             response = f"Echo: {text}"
 
+        self.pipeline_ready.emit("idle", "", "")
         self.response_ready.emit(response)
 
     def _toggle_voice(self):

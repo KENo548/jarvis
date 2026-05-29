@@ -37,9 +37,43 @@ WHISPER_URL = "http://localhost:8081"
 SAMPLE_RATE = 16000
 CHANNELS = 1
 CHUNK_DURATION = 0.5  # seconds per chunk for VAD
-SILENCE_THRESHOLD = 500  # amplitude threshold for silence detection
+SILENCE_THRESHOLD = 300  # amplitude threshold for silence detection
 MAX_RECORD_SECONDS = 30
 TTS_VOICE = "en-US-GuyNeural"  # Edge TTS voice
+MIC_DEVICE = None  # auto-detect
+
+
+def _find_best_mic():
+    """Find the best input device by testing each one briefly."""
+    import sounddevice as sd
+    import numpy as np
+
+    devices = sd.query_devices()
+    best_idx = sd.default.device[0]
+    best_amp = 0
+
+    for i, d in enumerate(devices):
+        if d["max_input_channels"] < 1:
+            continue
+        if "Stereo Mix" in d["name"] or "PC Speaker" in d["name"]:
+            continue
+        try:
+            with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16",
+                                blocksize=4000, device=i) as stream:
+                data, _ = stream.read(4000)
+                audio = data[:, 0] if data.ndim > 1 else data
+                amp = np.abs(audio).mean()
+                if amp > best_amp:
+                    best_amp = amp
+                    best_idx = i
+        except Exception:
+            continue
+
+    if best_amp > 100:
+        print(f"[VoiceIO] Using mic: {devices[best_idx]['name']} (device {best_idx}, amp={best_amp:.0f})")
+    else:
+        print(f"[VoiceIO] Using default mic: {devices[best_idx]['name']} (device {best_idx})")
+    return best_idx
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +95,10 @@ def record_audio(
         print("[VoiceIO] sounddevice not installed. Run: pip install sounddevice")
         return None
 
+    global MIC_DEVICE
+    if MIC_DEVICE is None:
+        MIC_DEVICE = _find_best_mic()
+
     audio_chunks: list[np.ndarray] = []
     silence_start: float | None = None
     is_recording = False
@@ -73,6 +111,7 @@ def record_audio(
             channels=CHANNELS,
             dtype="int16",
             blocksize=int(SAMPLE_RATE * CHUNK_DURATION),
+            device=MIC_DEVICE,
         ) as stream:
             start_time = time.time()
 
@@ -183,37 +222,51 @@ def speak(text: str, voice: str = TTS_VOICE) -> bool:
         import edge_tts
     except ImportError:
         print("[VoiceIO] edge-tts not installed. Run: pip install edge-tts")
-        print(f"[VoiceIO] Would say: {text[:100]}")
         return False
 
     try:
-        # Generate TTS audio
+        import numpy as np
+        import sounddevice as sd
+        import io, wave
+
         communicate = edge_tts.Communicate(text, voice)
 
-        # Save to temp file and play
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
             tmp_path = tmp.name
 
-        asyncio.run(communicate.save(tmp_path))
-
-        # Play with sounddevice (via pydub or direct)
+        # Run async edge_tts in a new event loop (safe from threads)
         try:
-            from pydub import AudioSegment
-            from pydub.playback import play as pydub_play
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    pool.submit(asyncio.run, communicate.save(tmp_path)).result()
+            else:
+                loop.run_until_complete(communicate.save(tmp_path))
+        except RuntimeError:
+            asyncio.run(communicate.save(tmp_path))
 
-            audio = AudioSegment.from_mp3(tmp_path)
-            audio = audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS)
-            pydub_play(audio)
-        except ImportError:
-            # Fallback: use system player
+        # Convert MP3 to raw PCM via edge_tts audio stream, fallback to file
+        try:
             import subprocess
+            pcm_path = tmp_path.replace(".mp3", ".raw")
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", tmp_path, "-f", "s16le", "-ar", str(SAMPLE_RATE),
+                 "-ac", str(CHANNELS), pcm_path],
+                capture_output=True, timeout=10,
+            )
+            pcm_data = Path(pcm_path).read_bytes()
+            audio = np.frombuffer(pcm_data, dtype=np.int16)
+            sd.play(audio, samplerate=SAMPLE_RATE, blocking=True)
+            try:
+                Path(pcm_path).unlink()
+            except Exception:
+                pass
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            # ffmpeg not available — open in default media player
             if sys.platform == "win32":
                 subprocess.Popen(["cmd", "/c", "start", tmp_path], shell=False)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["afplay", tmp_path])
-            else:
-                subprocess.Popen(["mpg123", tmp_path])
-            time.sleep(min(len(text) * 0.05, 10))  # rough estimate
+            time.sleep(min(len(text) * 0.05, 10))
 
         try:
             Path(tmp_path).unlink()
@@ -273,7 +326,10 @@ def voice_loop(
             print(f"[VoiceIO] Sage says: {response}")
 
             # Speak response
-            speak(response)
+            try:
+                speak(response)
+            except Exception as e:
+                print(f"[VoiceIO] Speak failed: {e}")
 
             if not continuous:
                 break

@@ -147,27 +147,10 @@ def process_task(task_text: str) -> str:
             response += "\n\nSources:\n" + "\n".join(f"  \u2022 {s}" for s in sources)
     elif agent == "memory_coordinator":
         result = coordinate_memory(task_text)
-        # Actually execute memory updates
+        # Memory updates are already handled by coordinate_memory (Chroma + JSON fallback)
         memory_updates = result.get("memory_updates", {})
         if memory_updates:
-            try:
-                from agents.memory_coordinator import coordinate_memory as _cm
-                # Write updates through the memory store
-                memory_path = Path(__file__).resolve().parent / "memory" / "sqlite" / "memory_store.json"
-                memory_path.parent.mkdir(parents=True, exist_ok=True)
-                existing = {}
-                if memory_path.exists():
-                    existing = json.loads(memory_path.read_text(encoding="utf-8"))
-                # Merge updates
-                for category, entries in memory_updates.items():
-                    if category not in existing:
-                        existing[category] = {}
-                    if isinstance(entries, dict):
-                        existing[category].update(entries)
-                memory_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
-                response = f"Memory updated: {len(memory_updates)} category(ies). {result.get('context_assembly', '')}"
-            except Exception as e:
-                response = f"Memory plan created but write failed: {e}"
+            response = f"Memory updated: {len(memory_updates)} category(ies). {result.get('context_assembly', '')}"
         else:
             response = result.get("context_assembly", "Memory analyzed, no updates needed.")
     else:

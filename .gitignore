@@ -22,6 +22,7 @@ security/*.txt
 # API keys and tokens (root-level configs with secrets only)
 /config.json
 /credentials.json
+**/config/api_keys.json
 
 # Sensitive data
 **/*.pem

@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import psutil
+from config.llm_client import format_model_label, list_models, model_tooltip, search_models
 
 from PyQt6.QtCore import (
     QEasingCurve, QMimeData, QObject, QPointF, QRectF, QSize, Qt,
@@ -19,13 +20,13 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QBrush, QColor, QDragEnterEvent, QDropEvent, QFont, QFontDatabase,
-    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap,
+    QKeySequence, QLinearGradient, QPainter, QPainterPath, QPalette, QPen, QPixmap,
     QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
-    QApplication, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QPushButton, QScrollArea, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget, QProgressBar,
+    QApplication, QFileDialog, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QMainWindow, QPushButton, QScrollArea, QSizePolicy, QStyledItemDelegate, QTextEdit,
+    QVBoxLayout, QWidget, QProgressBar, QStyle, QStyleOptionViewItem,
 )
 
 def _base_dir() -> Path:
@@ -67,6 +68,38 @@ class C:
     WHITE     = "#d8f8ff"
     DARK      = "#000d14"
     BAR_BG    = "#011520"
+
+
+class _ModelItemDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        text = str(index.data(Qt.ItemDataRole.DisplayRole) or "")
+        is_free = bool(index.data(Qt.ItemDataRole.UserRole + 1))
+        if not is_free or "FREE" not in text:
+            super().paint(painter, option, index)
+            return
+
+        base_text = text.rsplit("  FREE", 1)[0].strip()
+        suffix = "FREE"
+        painter.save()
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        opt.text = ""
+        style = opt.widget.style() if opt.widget else QApplication.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+
+        text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, opt.widget)
+        metrics = painter.fontMetrics()
+        suffix_width = metrics.horizontalAdvance(suffix)
+        gap = 6
+        available = max(0, text_rect.width() - suffix_width - gap)
+        base_text = metrics.elidedText(base_text, Qt.TextElideMode.ElideRight, available)
+        base_width = metrics.horizontalAdvance(base_text)
+
+        painter.setPen(opt.palette.color(QPalette.ColorRole.Text))
+        painter.drawText(text_rect.adjusted(0, 0, -suffix_width - gap, 0), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, base_text)
+        painter.setPen(QColor(C.TEXT_DIM))
+        painter.drawText(text_rect.adjusted(base_width + gap, 0, 0, 0), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, suffix)
+        painter.restore()
 
 
 def qcol(h: str, a: int = 255) -> QColor:
@@ -856,9 +889,9 @@ class _DropCanvas(QWidget):
 
 
 class SetupOverlay(QWidget):
-    done = pyqtSignal(str, str)
+    done = pyqtSignal(dict, str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, initial_config: dict | None = None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
@@ -873,6 +906,8 @@ class SetupOverlay(QWidget):
             _OS.lower(), "linux"
         )
         self._sel_os = detected
+        self._initial_config = initial_config or {}
+        self._models_cache: dict[str, list[dict]] = {}
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 22, 30, 22)
@@ -895,21 +930,156 @@ class SetupOverlay(QWidget):
         sep.setStyleSheet(f"color: {C.BORDER};"); layout.addWidget(sep)
         layout.addSpacing(4)
 
-        layout.addWidget(_lbl("GEMINI API KEY", 8, color=C.TEXT_DIM,
+        layout.addWidget(_lbl("LLM PROVIDER", 8, color=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
-        self._key_input = QLineEdit()
-        self._key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self._key_input.setPlaceholderText("AIza…")
-        self._key_input.setFont(QFont("Courier New", 10))
-        self._key_input.setFixedHeight(32)
-        self._key_input.setStyleSheet(f"""
+        self._provider = QComboBox()
+        self._provider.setFont(QFont("Courier New", 9))
+        self._provider.setFixedHeight(32)
+        self._provider.addItems(["openai", "nvidia", "opencode_zen"])
+        self._provider.setStyleSheet(f"""
+            QComboBox {{
+                background: #000d12; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 2px 8px;
+            }}
+            QComboBox:focus {{ border: 1px solid {C.PRI}; }}
+        """)
+        layout.addWidget(self._provider)
+        layout.addSpacing(6)
+
+        layout.addWidget(_lbl("MODEL", 8, color=C.TEXT_DIM,
+                               align=Qt.AlignmentFlag.AlignLeft))
+
+        self._model_search = QLineEdit()
+        self._model_search.setPlaceholderText("Search models, families, or FREE")
+        self._model_search.setFont(QFont("Courier New", 8))
+        self._model_search.setFixedHeight(28)
+        self._model_search.setStyleSheet(f"""
             QLineEdit {{
                 background: #000d12; color: {C.TEXT};
                 border: 1px solid {C.BORDER}; border-radius: 3px; padding: 4px 8px;
             }}
             QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
         """)
-        layout.addWidget(self._key_input)
+        self._model_search.setClearButtonEnabled(True)
+        self._model_search.textChanged.connect(lambda: self._reload_models(force=False))
+        layout.addWidget(self._model_search)
+
+        model_row = QHBoxLayout()
+        model_row.setSpacing(6)
+
+        self._model_combo = QComboBox()
+        self._model_combo.setEditable(True)
+        self._model_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self._model_combo.setFont(QFont("Courier New", 9))
+        self._model_combo.setFixedHeight(32)
+        self._model_combo.setStyleSheet(f"""
+            QComboBox {{
+                background: #000d12; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 4px 8px;
+            }}
+            QComboBox:focus {{ border: 1px solid {C.PRI}; }}
+        """)
+        self._model_combo.setItemDelegate(_ModelItemDelegate(self._model_combo))
+        if self._model_combo.lineEdit():
+            self._model_combo.lineEdit().setPlaceholderText("Select or type a model id")
+        self._model_combo.setToolTip("Model stats appear when you hover model names in the dropdown list.")
+        model_row.addWidget(self._model_combo, stretch=1)
+
+        refresh_btn = QPushButton("↻")
+        refresh_btn.setFixedSize(32, 32)
+        refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_btn.setToolTip("Refresh model list")
+        refresh_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #00141d; color: {C.PRI};
+                border: 1px solid {C.BORDER}; border-radius: 3px;
+            }}
+            QPushButton:hover {{ border: 1px solid {C.PRI}; background: #001f2e; }}
+        """)
+        refresh_btn.clicked.connect(lambda: self._reload_models(force=True))
+        model_row.addWidget(refresh_btn)
+
+        layout.addLayout(model_row)
+
+        self._model_hint = QLabel("Model list will be fetched from provider API when possible.")
+        self._model_hint.setFont(QFont("Courier New", 7))
+        self._model_hint.setStyleSheet(f"color: {C.TEXT_DIM}; background: transparent;")
+        self._model_hint.setWordWrap(True)
+        layout.addWidget(self._model_hint)
+        layout.addSpacing(6)
+
+        def _key_box(placeholder: str) -> QLineEdit:
+            w = QLineEdit()
+            w.setEchoMode(QLineEdit.EchoMode.Password)
+            w.setPlaceholderText(placeholder)
+            w.setFont(QFont("Courier New", 9))
+            w.setFixedHeight(30)
+            w.setStyleSheet(f"""
+                QLineEdit {{
+                    background: #000d12; color: {C.TEXT};
+                    border: 1px solid {C.BORDER}; border-radius: 3px; padding: 4px 8px;
+                }}
+                QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
+            """)
+            return w
+
+        layout.addWidget(_lbl("OPENAI API KEY", 8, color=C.TEXT_DIM,
+                               align=Qt.AlignmentFlag.AlignLeft))
+        self._openai_key_input = _key_box("sk-...")
+        layout.addWidget(self._openai_key_input)
+
+        layout.addWidget(_lbl("NVIDIA API KEY", 8, color=C.TEXT_DIM,
+                               align=Qt.AlignmentFlag.AlignLeft))
+        self._nvidia_key_input = _key_box("nvapi-...")
+        layout.addWidget(self._nvidia_key_input)
+
+        layout.addWidget(_lbl("OPENCODE ZEN API KEY", 8, color=C.TEXT_DIM,
+                               align=Qt.AlignmentFlag.AlignLeft))
+        self._zen_key_input = _key_box("zen-...")
+        layout.addWidget(self._zen_key_input)
+
+        layout.addWidget(_lbl("OPENCODE ZEN BASE URL", 8, color=C.TEXT_DIM,
+                               align=Qt.AlignmentFlag.AlignLeft))
+        self._zen_base_url_input = QLineEdit()
+        self._zen_base_url_input.setPlaceholderText("https://<your-zen-endpoint>/v1")
+        self._zen_base_url_input.setFont(QFont("Courier New", 9))
+        self._zen_base_url_input.setFixedHeight(30)
+        self._zen_base_url_input.setStyleSheet(f"""
+            QLineEdit {{
+                background: #000d12; color: {C.TEXT};
+                border: 1px solid {C.BORDER}; border-radius: 3px; padding: 4px 8px;
+            }}
+            QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
+        """)
+        layout.addWidget(self._zen_base_url_input)
+
+        default_models = {
+            "openai": "gpt-4o-mini",
+            "nvidia": "meta/llama-3.1-70b-instruct",
+            "opencode_zen": "gpt-4.1-mini",
+        }
+
+        def _provider_changed(provider: str):
+            if not self._model_combo.currentText().strip():
+                self._model_combo.setEditText(default_models.get(provider, "gpt-4o-mini"))
+            self._reload_models(force=False)
+
+        self._provider.currentTextChanged.connect(_provider_changed)
+        self._openai_key_input.editingFinished.connect(lambda: self._reload_models(force=False))
+        self._nvidia_key_input.editingFinished.connect(lambda: self._reload_models(force=False))
+        self._zen_key_input.editingFinished.connect(lambda: self._reload_models(force=False))
+        self._zen_base_url_input.editingFinished.connect(lambda: self._reload_models(force=False))
+
+        self._provider.setCurrentText(str(self._initial_config.get("llm_provider") or "nvidia"))
+        self._openai_key_input.setText(str(self._initial_config.get("openai_api_key") or ""))
+        self._nvidia_key_input.setText(str(self._initial_config.get("nvidia_api_key") or ""))
+        self._zen_key_input.setText(str(self._initial_config.get("opencode_zen_api_key") or ""))
+        self._zen_base_url_input.setText(str(self._initial_config.get("opencode_zen_base_url") or ""))
+
+        _provider_changed(self._provider.currentText())
+        existing_model = str(self._initial_config.get("llm_model") or "").strip()
+        if existing_model:
+            self._model_combo.setEditText(existing_model)
         layout.addSpacing(12)
 
         sep2 = QFrame(); sep2.setFrameShape(QFrame.Shape.HLine)
@@ -974,14 +1144,98 @@ class SetupOverlay(QWidget):
                 """)
 
     def _submit(self):
-        key = self._key_input.text().strip()
-        if not key:
-            self._key_input.setStyleSheet(
-                self._key_input.styleSheet() +
+        provider = self._provider.currentText().strip().lower()
+        model = self._model_combo.currentText().strip()
+        selected_key_input = {
+            "openai": self._openai_key_input,
+            "nvidia": self._nvidia_key_input,
+            "opencode_zen": self._zen_key_input,
+        }.get(provider, self._openai_key_input)
+
+        if not model:
+            self._model_combo.setStyleSheet(
+                self._model_combo.styleSheet() +
                 f" QLineEdit {{ border: 1px solid {C.RED}; }}"
             )
             return
-        self.done.emit(key, self._sel_os)
+
+        if not selected_key_input.text().strip():
+            selected_key_input.setStyleSheet(
+                selected_key_input.styleSheet() +
+                f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+            )
+            return
+
+        zen_base_url = self._zen_base_url_input.text().strip()
+        if provider == "opencode_zen" and not zen_base_url:
+            self._zen_base_url_input.setStyleSheet(
+                self._zen_base_url_input.styleSheet() +
+                f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+            )
+            return
+
+        self.done.emit(
+            {
+                "llm_provider": provider,
+                "llm_model": model,
+                "openai_api_key": self._openai_key_input.text().strip(),
+                "nvidia_api_key": self._nvidia_key_input.text().strip(),
+                "opencode_zen_api_key": self._zen_key_input.text().strip(),
+                "opencode_zen_base_url": zen_base_url,
+            },
+            self._sel_os,
+        )
+
+    def _reload_models(self, force: bool = False):
+        provider = self._provider.currentText().strip().lower()
+        if provider not in {"openai", "nvidia", "opencode_zen"}:
+            return
+
+        current_text = self._model_combo.currentText().strip()
+        search_text = self._model_search.text().strip()
+        if not force and provider in self._models_cache and self._models_cache[provider]:
+            models = self._models_cache[provider]
+        else:
+            key_map = {
+                "openai": self._openai_key_input.text().strip(),
+                "nvidia": self._nvidia_key_input.text().strip(),
+                "opencode_zen": self._zen_key_input.text().strip(),
+            }
+            url_map = {
+                "openai": "",
+                "nvidia": "",
+                "opencode_zen": self._zen_base_url_input.text().strip(),
+            }
+            models = list_models(
+                provider=provider,
+                api_key=key_map.get(provider, ""),
+                base_url=url_map.get(provider, ""),
+            )
+            self._models_cache[provider] = models
+
+        models = search_models(models, search_text)
+
+        self._model_combo.blockSignals(True)
+        self._model_combo.clear()
+        for model in models:
+            mid = str(model.get("id", "")).strip()
+            if not mid:
+                continue
+            self._model_combo.addItem(format_model_label(model))
+            idx = self._model_combo.count() - 1
+            self._model_combo.setItemData(idx, model, Qt.ItemDataRole.UserRole)
+            self._model_combo.setItemData(idx, bool(model.get("is_free")), Qt.ItemDataRole.UserRole + 1)
+            self._model_combo.setItemData(idx, model_tooltip(model), Qt.ItemDataRole.ToolTipRole)
+        self._model_combo.blockSignals(False)
+
+        if current_text:
+            self._model_combo.setEditText(current_text)
+        elif self._model_combo.count() > 0:
+            self._model_combo.setCurrentIndex(0)
+
+        self._model_hint.setText(
+            f"Loaded {self._model_combo.count()} models for {provider}. Search above to rank matches; hover a model for quick stats."
+        )
 
 
 class MainWindow(QMainWindow):
@@ -1063,7 +1317,7 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self._overlay and self._overlay.isVisible():
-            ow, oh = 460, 390
+            ow, oh = 520, 640
             cw = self.centralWidget()
             self._overlay.setGeometry(
                 (cw.width()  - ow) // 2,
@@ -1417,14 +1671,37 @@ class MainWindow(QMainWindow):
         if not API_FILE.exists(): return False
         try:
             d = json.loads(API_FILE.read_text(encoding="utf-8"))
-            return bool(d.get("gemini_api_key")) and bool(d.get("os_system"))
+            provider = (d.get("llm_provider") or "").strip().lower()
+            model = (d.get("llm_model") or "").strip()
+            key_map = {
+                "openai": d.get("openai_api_key", ""),
+                "nvidia": d.get("nvidia_api_key", ""),
+                "opencode_zen": d.get("opencode_zen_api_key", ""),
+            }
+            active_key = key_map.get(provider, "")
+            if provider not in key_map:
+                return False
+
+            if provider == "opencode_zen":
+                has_zen_url = bool((d.get("opencode_zen_base_url") or "").strip())
+            else:
+                has_zen_url = True
+
+            return bool(d.get("os_system")) and bool(model) and has_zen_url and bool(active_key)
         except Exception:
             return False
 
     def _show_setup(self):
-        ov = SetupOverlay(self.centralWidget())
+        initial_cfg = {}
+        if API_FILE.exists():
+            try:
+                initial_cfg = json.loads(API_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                initial_cfg = {}
+
+        ov = SetupOverlay(self.centralWidget(), initial_config=initial_cfg)
         cw = self.centralWidget()
-        ow, oh = 460, 390
+        ow, oh = 520, 640
         ov.setGeometry(
             (cw.width()  - ow) // 2,
             (cw.height() - oh) // 2,
@@ -1434,10 +1711,27 @@ class MainWindow(QMainWindow):
         ov.show()
         self._overlay = ov
 
-    def _on_setup_done(self, key: str, os_name: str):
+    def _on_setup_done(self, cfg: dict, os_name: str):
         os.makedirs(CONFIG_DIR, exist_ok=True)
+        existing = {}
+        if API_FILE.exists():
+            try:
+                existing = json.loads(API_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                existing = {}
+
+        existing.update({
+            "llm_provider": cfg.get("llm_provider", "openai"),
+            "llm_model": cfg.get("llm_model", "gpt-4o-mini"),
+            "openai_api_key": cfg.get("openai_api_key", ""),
+            "nvidia_api_key": cfg.get("nvidia_api_key", ""),
+            "opencode_zen_api_key": cfg.get("opencode_zen_api_key", ""),
+            "opencode_zen_base_url": cfg.get("opencode_zen_base_url", ""),
+            "os_system": os_name,
+        })
+
         API_FILE.write_text(
-            json.dumps({"gemini_api_key": key, "os_system": os_name}, indent=4),
+            json.dumps(existing, indent=4),
             encoding="utf-8",
         )
         self._ready = True
