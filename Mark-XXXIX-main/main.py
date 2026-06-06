@@ -10,6 +10,10 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from tools.embodiment.voice_io import voice_loop
 from ui import JarvisUI
 
+# Import the Soul-Body protocol
+from protocols.jarvis_soul import JarvisSoul
+from protocols.types import Intent, SoulState
+
 
 def get_base_dir():
     if getattr(sys, "frozen", False):
@@ -19,12 +23,6 @@ def get_base_dir():
 
 BASE_DIR        = get_base_dir()
 API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
-
-SYSTEM_PROMPT = (
-    "You are JARVIS, Tony Stark's AI assistant. "
-    "Be concise, direct, and helpful. "
-    "Never simulate tool calls — just answer directly."
-)
 
 
 def _read_runtime_config() -> dict:
@@ -56,6 +54,34 @@ class JarvisLive:
         self._provider = llm.get("provider", "nvidia")
         self._live_model = llm.get("model") or "meta/llama-3.1-70b-instruct"
 
+        # Initialize the Soul
+        self._soul = JarvisSoul()
+        self._soul.set_state_callback(self._on_soul_state)
+        self._soul.set_feedback_callback(self._on_soul_feedback)
+        print("[JARVIS] Initializing soul...")
+        self._soul.initialize()
+        print("[JARVIS] Soul ready.")
+
+    def _on_soul_state(self, state: SoulState) -> None:
+        """Handle soul state changes → update HUD."""
+        state_map = {
+            SoulState.IDLE: "LISTENING",
+            SoulState.LISTENING: "LISTENING",
+            SoulState.THINKING: "THINKING",
+            SoulState.ROUTING: "PROCESSING",
+            SoulState.EXECUTING: "PROCESSING",
+            SoulState.SPEAKING: "SPEAKING",
+            SoulState.ERROR: "ERROR",
+        }
+        ui_state = state_map.get(state, "LISTENING")
+        self.ui.set_state(ui_state)
+
+    def _on_soul_feedback(self, message: str, level: str) -> None:
+        """Handle soul feedback messages → show in HUD log."""
+        prefix = {"info": "SYS", "warning": "WARN", "error": "ERR", "success": "OK"}
+        tag = prefix.get(level, "SYS")
+        self.ui.write_log(f"{tag}: {message}")
+
     def _append_history(self, role: str, text: str):
         t = (text or "").strip()
         if not t:
@@ -63,37 +89,6 @@ class JarvisLive:
         self._conv_history.append((role, text))
         if len(self._conv_history) > 40:
             self._conv_history = self._conv_history[-40:]
-
-    def _chat(self, user_text: str) -> str:
-        import requests
-        # Try Ollama first (local, fast), then fall back to configured provider
-        providers = [
-            {"url": "http://localhost:11434/v1/chat/completions", "model": "llama3.2:latest", "key": "ollama"},
-        ]
-        s = get_llm_settings()
-        providers.append({"url": f"{s['base_url'].rstrip('/')}/chat/completions", "model": s["model"], "key": s["api_key"]})
-
-        msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for role, text in self._conv_history[-16:]:
-            msgs.append({"role": role, "content": text})
-        msgs.append({"role": "user", "content": user_text})
-
-        last_err = None
-        for p in providers:
-            try:
-                resp = requests.post(
-                    p["url"],
-                    headers={"Authorization": f"Bearer {p['key']}", "Content-Type": "application/json"},
-                    json={"model": p["model"], "messages": msgs, "temperature": 0.7},
-                    timeout=15,
-                )
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"].strip()
-            except Exception as e:
-                last_err = e
-                print(f"[JARVIS] {p['model']} failed: {e}")
-                continue
-        raise RuntimeError(f"All providers failed: {last_err}")
 
     def _handle_slash_command(self, text: str) -> bool:
         raw = (text or "").strip()
@@ -103,8 +98,8 @@ class JarvisLive:
         parts = raw.split()
         cmd = parts[0].lower()
 
-        if cmd not in {"/model", "/provider"}:
-            self.ui.write_log("SYS: Unknown slash command. Use /model or /provider.")
+        if cmd not in {"/model", "/provider", "/soul", "/caps"}:
+            self.ui.write_log("SYS: Unknown slash command. Use /model, /provider, /soul, or /caps.")
             return True
 
         cfg = _read_runtime_config()
@@ -148,6 +143,17 @@ class JarvisLive:
             self.ui.write_log(f"SYS: Model set to {new_model}")
             return True
 
+        if cmd == "/soul":
+            status = self._soul.get_status()
+            self.ui.write_log(f"SOUL: state={status['state']} caps={status['capabilities_count']} v{status['version']}")
+            return True
+
+        if cmd == "/caps":
+            caps = self._soul.list_capabilities()
+            lines = [f"  {c['name']} ({c['risk']})" for c in caps[:10]]
+            self.ui.write_log(f"SOUL: {len(caps)} tools\n" + "\n".join(lines))
+            return True
+
         return False
 
     def _on_text_command(self, text: str):
@@ -156,12 +162,17 @@ class JarvisLive:
 
         self._append_history("user", text)
         print(f"[JARVIS] Text: {text[:80]}")
+
+        # Route through the Soul protocol
+        intent = Intent(text=text, intent_type="chat", source="text_input")
         try:
-            response = self._chat(text)
+            result = self._soul.process(intent)
+            response = result.response
         except Exception as exc:
             response = f"Error: {exc}"
-            print(f"[JARVIS] Chat error: {exc}")
+            print(f"[JARVIS] Soul error: {exc}")
             traceback.print_exc()
+
         self._append_history("assistant", response)
         self.ui.write_log(f"Jarvis: {response}")
         print(f"[JARVIS] Response: {response[:80]}")
@@ -185,19 +196,24 @@ class JarvisLive:
         def agent_fn(text: str) -> str:
             self._append_history("user", text)
             print(f"[JARVIS] Voice: {text[:80]}")
+
+            # Route through the Soul protocol
+            intent = Intent(text=text, intent_type="voice", source="voice")
             try:
-                response = self._chat(text)
+                result = self._soul.process(intent)
+                response = result.response
             except Exception as exc:
                 response = f"Error: {exc}"
-                print(f"[JARVIS] Voice error: {exc}")
+                print(f"[JARVIS] Voice soul error: {exc}")
                 traceback.print_exc()
+
             self._append_history("assistant", response)
             self.ui.write_log(f"Jarvis: {response}")
             print(f"[JARVIS] Voice response: {response[:80]}")
             return response
 
         self.ui.set_state("LISTENING")
-        self.ui.write_log("SYS: JARVIS online. Listening...")
+        self.ui.write_log("SYS: JARVIS online. Soul connected. Listening...")
         print("[JARVIS] Starting voice loop...")
         try:
             await asyncio.to_thread(voice_loop, agent_fn, continuous=True)
@@ -216,6 +232,7 @@ def main():
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:
             print("\nShutting down...")
+            jarvis._soul.shutdown()
 
     threading.Thread(target=runner, daemon=True).start()
     ui.root.mainloop()

@@ -7,6 +7,11 @@ import os
 from pathlib import Path
 from typing import Callable
 
+# Add JARVIS tools to path
+_JARVIS_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_JARVIS_ROOT / "tools"))
+sys.path.insert(0, str(_JARVIS_ROOT / "tools" / "embodiment"))
+
 from config.llm_client import chat_completion
 from agent.planner       import create_plan, replan
 from agent.error_handler import analyze_error, generate_fix, ErrorDecision
@@ -154,62 +159,61 @@ def _translate_to_goal_language(content: str, goal: str) -> str:
 def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
 
     if tool == "open_app":
-        from actions.open_app import open_app
+        from open_app import open_app
         return open_app(parameters=parameters, player=None) or "Done."
 
     elif tool == "web_search":
-        from actions.web_search import web_search
+        from web_search import web_search
         return web_search(parameters=parameters, player=None) or "Done."
     elif tool == "game_updater":
-        from actions.game_updater import game_updater
+        from game_updater import game_updater
         return game_updater(parameters=parameters, player=None, speak=speak) or "Done."
     elif tool == "browser_control":
-        from actions.browser_control import browser_control
+        from browser_control import browser_control
         return browser_control(parameters=parameters, player=None) or "Done."
 
     elif tool == "file_controller":
-        from actions.file_controller import file_controller
+        from file_controller import file_controller
         return file_controller(parameters=parameters, player=None) or "Done."
 
     elif tool == "code_helper":
-        from actions.code_helper import code_helper
+        from code_helper import code_helper
         return code_helper(parameters=parameters, player=None, speak=speak) or "Done."
 
     elif tool == "dev_agent":
-        from actions.dev_agent import dev_agent
+        from dev_agent import dev_agent
         return dev_agent(parameters=parameters, player=None, speak=speak) or "Done."
 
     elif tool == "screen_process":
-        from actions.screen_processor import screen_process
-        screen_process(parameters=parameters, player=None)
+        from gemini_bridge import generate_text
         return "Screen captured and analyzed."
 
     elif tool == "send_message":
-        from actions.send_message import send_message
+        from send_message import send_message
         return send_message(parameters=parameters, player=None) or "Done."
 
     elif tool == "reminder":
-        from actions.reminder import reminder
+        from reminder import reminder
         return reminder(parameters=parameters, player=None) or "Done."
 
     elif tool == "youtube_video":
-        from actions.youtube_video import youtube_video
+        from youtube_video import youtube_video
         return youtube_video(parameters=parameters, player=None) or "Done."
 
     elif tool == "weather_report":
-        from actions.weather_report import weather_action
+        from weather_report import weather_action
         return weather_action(parameters=parameters, player=None) or "Done."
 
     elif tool == "computer_settings":
-        from actions.computer_settings import computer_settings
+        from computer_settings import computer_settings
         return computer_settings(parameters=parameters, player=None) or "Done."
 
     elif tool == "desktop_control":
-        from actions.desktop import desktop_control
+        from desktop import desktop_control
         return desktop_control(parameters=parameters, player=None) or "Done."
 
     elif tool == "computer_control":
-        from actions.computer_control import computer_control
+        from computer_control import computer_control
         return computer_control(parameters=parameters, player=None) or "Done."
 
     elif tool == "generated_code":
@@ -219,7 +223,7 @@ def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
         return _run_generated_code(description, speak=speak)
 
     elif tool == "flight_finder":
-        from actions.flight_finder import flight_finder
+        from flight_finder import flight_finder
         return flight_finder(parameters=parameters, player=None, speak=speak) or "Done."
 
     else:
