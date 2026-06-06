@@ -675,4 +675,7 @@ def run_ui(process_fn=None, auto_voice=False):
 
 
 if __name__ == "__main__":
-    run_ui()
+    import subprocess
+    main_py = Path(__file__).resolve().parent / "Mark-XXXIX-main" / "main.py"
+    print(f"Redirecting to {main_py} (the only Soul-protected entry point)")
+    sys.exit(subprocess.call([sys.executable, str(main_py)]))

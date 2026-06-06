@@ -504,15 +504,9 @@ if __name__ == "__main__":
         voice_mode()
     elif args.text:
         text_mode()
-    elif args.no_voice:
-        from ui import run_ui
-        run_ui(process_fn=process_task)
     else:
-        # Default: launch PyQt6 GUI with voice auto-started
-        print("  SAGE — launching UI with voice...")
-        try:
-            from ui import run_ui
-            run_ui(process_fn=process_task, auto_voice=True)
-        except ImportError:
-            print("PyQt6 not installed. Falling back to text mode.")
-            text_mode()
+        # All UI modes delegate to Mark-XXXIX main.py (the only Soul-protected entry point)
+        import subprocess
+        main_py = Path(__file__).resolve().parent / "Mark-XXXIX-main" / "main.py"
+        print(f"  SAGE — delegating to {main_py}")
+        sys.exit(subprocess.call([sys.executable, str(main_py)] + (["--no-voice"] if args.no_voice else [])))

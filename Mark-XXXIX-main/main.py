@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import threading
 import json
@@ -5,7 +6,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from config.llm_client import chat_completion, format_model_label, get_llm_settings, list_models, search_models
+from config.llm_client import get_llm_settings
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from tools.embodiment.voice_io import voice_loop
 from ui import JarvisUI
@@ -43,16 +44,22 @@ def _write_runtime_config(cfg: dict) -> None:
 
 class JarvisLive:
 
-    def __init__(self, ui: JarvisUI):
+    def __init__(self, ui: JarvisUI, voice: bool = True):
         self.ui             = ui
+        self._voice         = voice
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
         self.ui.on_text_command = self._on_text_command
         self._conv_history: list[tuple[str, str]] = []
+        self._pending_approvals: dict[str, str] = {}  # proposal_id → tool_name
 
-        llm = get_llm_settings()
-        self._provider = llm.get("provider", "nvidia")
-        self._live_model = llm.get("model") or "meta/llama-3.1-70b-instruct"
+        try:
+            llm = get_llm_settings()
+            self._provider = llm.get("provider", "ollama")
+            self._live_model = llm.get("model") or "llama3.2:latest"
+        except Exception:
+            self._provider = "ollama"
+            self._live_model = "llama3.2:latest"
 
         # Initialize the Soul
         self._soul = JarvisSoul()
@@ -116,19 +123,26 @@ class JarvisLive:
         # In a real GUI, this would show a dialog.
         # For now, we log it and the operator can use /approve or /deny.
         # The approval_id is stored so the operator can respond.
-        self._pending_approval_id = proposal_id
+        self._pending_approvals[proposal_id] = tool_name
 
-    def _handle_approval_response(self, approved: bool) -> None:
+    def _handle_approval_response(self, approved: bool, proposal_id: str | None = None) -> None:
         """Handle the operator's approval response."""
-        if not hasattr(self, '_pending_approval_id') or not self._pending_approval_id:
+        if not self._pending_approvals:
             self.ui.write_log("No pending approval to respond to.")
             return
 
-        proposal_id = self._pending_approval_id
-        self._pending_approval_id = None
+        if proposal_id:
+            if proposal_id not in self._pending_approvals:
+                self.ui.write_log(f"No pending approval with id {proposal_id}.")
+                return
+            target_id = proposal_id
+        else:
+            # No id specified → approve/deny the most recent (LIFO)
+            target_id = next(iter(self._pending_approvals))
 
-        result = self._soul.approve_tool_calls(proposal_id, approved)
-        self.ui.write_log(f"APPROVAL: {'APPROVED' if approved else 'DENIED'} — {result.response}")
+        tool_name = self._pending_approvals.pop(target_id)
+        result = self._soul.approve_tool_calls(target_id, approved)
+        self.ui.write_log(f"APPROVAL: {'APPROVED' if approved else 'DENIED'} — {tool_name} — {result.response}")
 
     # ── Slash commands ─────────────────────────────────────────────
 
@@ -161,24 +175,32 @@ class JarvisLive:
             else:
                 reason = " ".join(parts[1:]) if len(parts) > 1 else "Operator override"
                 self._soul.activate_kill_switch(reason)
+                self._pending_approvals.clear()
                 self.ui.write_log(f"KILL SWITCH: ACTIVATED — {reason}")
             return True
 
         if cmd == "/approve":
-            self._handle_approval_response(True)
+            proposal_id = parts[1] if len(parts) > 1 else None
+            self._handle_approval_response(True, proposal_id)
             return True
 
         if cmd == "/deny":
-            self._handle_approval_response(False)
+            proposal_id = parts[1] if len(parts) > 1 else None
+            self._handle_approval_response(False, proposal_id)
             return True
 
         if cmd == "/status":
             status = self._soul.get_status()
             ks = self._soul.get_kill_switch_state()
+            body_pending = len(self._pending_approvals)
             self.ui.write_log(
                 f"SOUL: state={status['state']} caps={status['capabilities_count']} "
-                f"kill={'ON' if ks.active else 'OFF'} pending={status['pending_proposals']}"
+                f"kill={'ON' if ks.active else 'OFF'} "
+                f"soul_pending={status['pending_proposals']} body_pending={body_pending}"
             )
+            if self._pending_approvals:
+                for pid, tool in self._pending_approvals.items():
+                    self.ui.write_log(f"  ⏳ {pid[:8]}… → {tool}")
             return True
 
         if cmd == "/provider":
@@ -241,7 +263,7 @@ class JarvisLive:
         print(f"[JARVIS] Text: {text[:80]}")
 
         # Route through the Soul protocol
-        intent = Intent(text=text, intent_type="chat", source="text_input")
+        intent = Intent(text=text, intent_type="chat", metadata={"source": "text_input"})
         try:
             result = self._soul.process(intent)
             response = result.response
@@ -286,7 +308,7 @@ class JarvisLive:
             print(f"[JARVIS] Voice: {text[:80]}")
 
             # Route through the Soul protocol
-            intent = Intent(text=text, intent_type="voice", source="voice")
+            intent = Intent(text=text, intent_type="voice", metadata={"source": "voice"})
             try:
                 result = self._soul.process(intent)
                 response = result.response
@@ -306,6 +328,9 @@ class JarvisLive:
 
         self.ui.set_state("LISTENING")
         self.ui.write_log("SYS: JARVIS online. Three-tier authority active. Listening...")
+        if not self._voice:
+            self.ui.write_log("SYS: Voice disabled. Text-only mode.")
+            return
         print("[JARVIS] Starting voice loop...")
         try:
             await asyncio.to_thread(voice_loop, agent_fn, continuous=True)
@@ -315,11 +340,15 @@ class JarvisLive:
             self.ui.write_log(f"SYS: Voice error: {exc}")
 
 def main():
+    parser = argparse.ArgumentParser(description="J.A.R.V.I.S. — Mark XXXIX")
+    parser.add_argument("--no-voice", action="store_true", help="Disable voice loop (text-only mode)")
+    args = parser.parse_args()
+
     ui = JarvisUI("face.png")
 
     def runner():
         ui.wait_for_api_key()
-        jarvis = JarvisLive(ui)
+        jarvis = JarvisLive(ui, voice=not args.no_voice)
         try:
             asyncio.run(jarvis.run())
         except KeyboardInterrupt:
