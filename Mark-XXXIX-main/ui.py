@@ -673,6 +673,121 @@ class LogWidget(QTextEdit):
             self.ensureCursorVisible()
             QTimer.singleShot(20, self._next)
 
+class MessageBubble(QFrame):
+    """Chat bubble for user/assistant messages — styled for Mark XXXIX teal palette."""
+
+    def __init__(self, text: str, is_user: bool = True, parent=None):
+        super().__init__(parent)
+        self.is_user = is_user
+        self._setup_ui(text)
+
+    def _setup_ui(self, text: str):
+        if self.is_user:
+            bg = C.PANEL2
+            border = C.BORDER
+            sender_color = C.PRI
+            sender_text = "You"
+        else:
+            bg = C.PRI_GHO
+            border = C.BORDER_B
+            sender_color = C.GREEN
+            sender_text = "JARVIS"
+
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: 4px;
+                padding: 10px 14px;
+                margin: 3px 0;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(4)
+
+        sender = QLabel(sender_text)
+        sender.setFont(QFont("Courier New", 7, QFont.Weight.Bold))
+        sender.setStyleSheet(f"""
+            color: {sender_color};
+            background: transparent;
+            border: none;
+            letter-spacing: 1px;
+        """)
+        layout.addWidget(sender)
+
+        msg = QLabel(text)
+        msg.setWordWrap(True)
+        msg.setFont(QFont("Courier New", 9))
+        msg.setStyleSheet(f"""
+            color: {C.TEXT};
+            background: transparent;
+            border: none;
+            padding: 2px 0;
+        """)
+        layout.addWidget(msg)
+
+
+class ChatArea(QScrollArea):
+    """Chat area with message bubbles — replaces the typewriter log for conversation."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setStyleSheet(f"""
+            QScrollArea {{
+                background: {C.PANEL};
+                border: 1px solid {C.BORDER};
+                border-radius: 4px;
+            }}
+            QScrollBar:vertical {{
+                background: {C.BG};
+                width: 8px;
+                border: none;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {C.BORDER_B};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+        """)
+
+        container = QWidget()
+        container.setStyleSheet(f"background: {C.PANEL}; border: none;")
+        self._layout = QVBoxLayout(container)
+        self._layout.setContentsMargins(6, 6, 6, 6)
+        self._layout.setSpacing(4)
+        self._layout.addStretch()
+        self.setWidget(container)
+
+    def add_message(self, text: str, is_user: bool) -> None:
+        """Add a message bubble to the chat area."""
+        bubble = MessageBubble(text, is_user=is_user)
+        # Insert before the stretch
+        self._layout.insertWidget(self._layout.count() - 1, bubble)
+        # Auto-scroll to bottom
+        sb = self.verticalScrollBar()
+        sb.setValue(sb.maximum())
+
+    def add_system(self, text: str) -> None:
+        """Add a system message (styled differently)."""
+        lbl = QLabel(text)
+        lbl.setWordWrap(True)
+        lbl.setFont(QFont("Courier New", 8))
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl.setStyleSheet(f"""
+            color: {C.TEXT_DIM};
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+        """)
+        self._layout.insertWidget(self._layout.count() - 1, lbl)
+        sb = self.verticalScrollBar()
+        sb.setValue(sb.maximum())
+
+
 _FILE_ICONS = {
     "image":   ("🖼", "#00d4ff"), "video":   ("🎬", "#ff6b00"),
     "audio":   ("🎵", "#cc44ff"), "pdf":     ("📄", "#ff4444"),
@@ -1295,7 +1410,7 @@ class MainWindow(QMainWindow):
         self._metric_tmr.start(2000)
         self._update_metrics()
 
-        self._log_sig.connect(self._log.append_log)
+        self._log_sig.connect(self._on_log_message)
         self._state_sig.connect(self._apply_state)
 
         self._overlay: SetupOverlay | None = None
@@ -1307,6 +1422,16 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
+
+    def _on_log_message(self, text: str):
+        """Route log messages to the chat area."""
+        tl = text.lower()
+        if tl.startswith("you:"):
+            self._chat.add_message(text[4:].strip(), is_user=True)
+        elif tl.startswith("jarvis:") or tl.startswith("ai:"):
+            self._chat.add_message(text.split(":", 1)[1].strip(), is_user=False)
+        else:
+            self._chat.add_system(text)
 
     def _toggle_fullscreen(self):
         if self.isFullScreen():
@@ -1507,9 +1632,9 @@ class MainWindow(QMainWindow):
             l.setStyleSheet(f"color: {C.TEXT_MED}; background: transparent;")
             return l
 
-        lay.addWidget(_sec("ACTIVITY LOG"))
-        self._log = LogWidget()
-        lay.addWidget(self._log, stretch=1)
+        lay.addWidget(_sec("CONVERSATION"))
+        self._chat = ChatArea()
+        lay.addWidget(self._chat, stretch=1)
 
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
@@ -1615,7 +1740,7 @@ class MainWindow(QMainWindow):
         icon, _ = _FILE_ICONS.get(cat, _FILE_ICONS["unknown"])
         size = _fmt_size(p.stat().st_size)
         self._file_hint.setText(f"{icon}  {p.name}  ·  {size}  ·  Tell JARVIS what to do with it")
-        self._log.append_log(f"FILE: {p.name} ({size}) loaded")
+        self._on_log_message(f"FILE: {p.name} ({size}) loaded")
         if self.on_text_command:
             msg = (
                 f"[FILE_UPLOADED] path={path} | name={p.name} | "
@@ -1631,10 +1756,10 @@ class MainWindow(QMainWindow):
         self._style_mute_btn()
         if self._muted:
             self._apply_state("MUTED")
-            self._log.append_log("SYS: Microphone muted.")
+            self._on_log_message("SYS: Microphone muted.")
         else:
             self._apply_state("LISTENING")
-            self._log.append_log("SYS: Microphone active.")
+            self._on_log_message("SYS: Microphone active.")
 
     def _style_mute_btn(self):
         if self._muted:
@@ -1659,7 +1784,7 @@ class MainWindow(QMainWindow):
         txt = self._input.text().strip()
         if not txt: return
         self._input.clear()
-        self._log.append_log(f"You: {txt}")
+        self._on_log_message(f"You: {txt}")
         if self.on_text_command:
             threading.Thread(target=self.on_text_command, args=(txt,), daemon=True).start()
 
@@ -1739,7 +1864,7 @@ class MainWindow(QMainWindow):
             self._overlay.hide()
             self._overlay = None
         self._apply_state("LISTENING")
-        self._log.append_log(f"SYS: Initialised. OS={os_name.upper()}. JARVIS online.")
+        self._on_log_message(f"SYS: Initialised. OS={os_name.upper()}. JARVIS online.")
 
 class _RootShim:
     def __init__(self, app: QApplication):
