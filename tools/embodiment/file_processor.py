@@ -27,11 +27,27 @@ from datetime import datetime
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+from tools.llm_client import llm_call
+
+
+class _GenResponse:
+    """Mimics Gemini response with .text attribute."""
+    def __init__(self, text: str):
+        self.text = text
 
 
 def _gemini_client():
-    return GeminiClient(api_key="")
+    """Returns a simple wrapper (replaces GeminiClient) backed by llm_call."""
+    class _SimpleWrapper:
+        @staticmethod
+        def generate_content(contents, **kwargs):
+            if isinstance(contents, list):
+                prompt = str(contents[0])
+            else:
+                prompt = str(contents)
+            response = llm_call(prompt=prompt, model="ollama/llama3.2")
+            return _GenResponse(response.text)
+    return _SimpleWrapper()
 
 
 def _detect_type(path: Path) -> str:

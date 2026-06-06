@@ -13,7 +13,11 @@ import pyautogui
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+from tools.llm_client import llm_call
+
+# Local wrapper replacing gemini_bridge dependency
+def generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
 
 try:
     import requests

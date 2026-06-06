@@ -6,7 +6,11 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+from tools.llm_client import llm_call
+
+# Local wrapper replacing gemini_bridge dependency
+def generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
 
 
 def get_base_dir():
@@ -19,8 +23,8 @@ BASE_DIR         = get_base_dir()
 API_CONFIG_PATH  = BASE_DIR / "config" / "api_keys.json"
 PROJECTS_DIR     = Path.home() / "Desktop" / "JarvisProjects"
 MAX_FIX_ATTEMPTS = 5
-MODEL_PLANNER    = "gemini-2.5-flash"
-MODEL_WRITER     = "gemini-2.5-flash"
+MODEL_PLANNER    = "ollama/llama3.2"
+MODEL_WRITER     = "ollama/llama3.2"
 
 def _strip_fences(text: str) -> str:
     text = text.strip()

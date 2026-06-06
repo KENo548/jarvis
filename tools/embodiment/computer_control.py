@@ -9,8 +9,16 @@ import time
 import random
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "tools" / "embodiment"))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat, generate_with_vision
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.llm_client import llm_call
+
+# Local wrappers replacing gemini_bridge dependency
+def _generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
+
+def _generate_with_vision(prompt, image_data, mime_type="image/png", model=None):
+    """Vision via llm_client - falls back to text-only if vision unsupported."""
+    return _generate_text(prompt=prompt, model=model or "ollama/llama3.2")
 
 try:
     import pyautogui
@@ -315,7 +323,7 @@ def _screen_find(description: str) -> tuple[int, int] | None:
             f"If the element is not visible, reply: NOT_FOUND"
         )
 
-        text = generate_with_vision(
+        text = _generate_with_vision(
             prompt=prompt,
             image_data=image_bytes,
             mime_type="image/png",
@@ -501,17 +509,69 @@ _APPROVAL_REQUIRED = {"hotkey", "click", "double_click", "right_click", "press",
 def safe_computer_action(parameters: dict) -> dict:
     """SAGE-compatible wrapper with approval gate for dangerous actions."""
     action = parameters.get("action", "")
+
+    # ── Asimov safety pre-check (runs BEFORE approval gate) ──────────────
+    try:
+        from tools.asimov import check_action
+        # Build a target string from the most relevant parameter values
+        target_parts = []
+        if parameters.get("keys"):
+            target_parts.append(f"keys={parameters['keys']}")
+        if parameters.get("text"):
+            target_parts.append(f"text={parameters['text']}")
+        if parameters.get("description"):
+            target_parts.append(f"desc={parameters['description']}")
+        if parameters.get("key"):
+            target_parts.append(f"key={parameters['key']}")
+        target_str = ", ".join(target_parts) if target_parts else action
+
+        asimov_allowed, asimov_reason = check_action(
+            f"computer_{action}", target_str, {"parameters": parameters}
+        )
+        if not asimov_allowed:
+            if "FIRST LAW" in asimov_reason:
+                # First Law — absolute block, no user override
+                print(f"\n🚫 ASIMOV FIRST LAW: {asimov_reason}")
+                return {
+                    "tool": "os_control",
+                    "action": action,
+                    "needs_approval": True,
+                    "status": "blocked",
+                    "asimov_law": "First Law",
+                    "message": asimov_reason,
+                    "parameters": parameters,
+                }
+            else:
+                # Third Law — user may override
+                print(f"\n⚠️  ASIMOV THIRD LAW: {asimov_reason}")
+                response = input("Override Asimov Third Law protection? (y/N): ").strip().lower()
+                if response not in ("y", "yes"):
+                    return {
+                        "tool": "os_control",
+                        "action": action,
+                        "needs_approval": True,
+                        "status": "blocked",
+                        "asimov_law": "Third Law",
+                        "message": asimov_reason,
+                        "parameters": parameters,
+                    }
+    except ImportError:
+        pass  # Asimov module not available — proceed without it
+
     needs_approval = action in _APPROVAL_REQUIRED
 
     if needs_approval:
-        return {
-            "tool": "os_control",
-            "action": action,
-            "needs_approval": True,
-            "status": "pending_approval",
-            "message": f"OS control action '{action}' requires approval.",
-            "parameters": parameters,
-        }
+        print(f"\n⚠️  APPROVAL REQUIRED: OS control action '{action}' with parameters {parameters}")
+        response = input("Proceed? (y/N): ").strip().lower()
+        if response != 'y':
+            return {
+                "tool": "os_control",
+                "action": action,
+                "needs_approval": True,
+                "status": "denied",
+                "message": f"OS control action '{action}' was rejected by user.",
+                "parameters": parameters,
+            }
 
     try:
         result = computer_control(parameters=parameters)

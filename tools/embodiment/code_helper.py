@@ -6,7 +6,11 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+from tools.llm_client import llm_call
+
+# Local wrapper replacing gemini_bridge dependency
+def generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
 
 
 def get_base_dir():
@@ -18,7 +22,7 @@ BASE_DIR           = get_base_dir()
 API_CONFIG_PATH    = BASE_DIR / "config" / "api_keys.json"
 DESKTOP            = Path.home() / "Desktop"
 MAX_BUILD_ATTEMPTS = 3
-GEMINI_MODEL       = "gemini-2.5-flash"
+GEMINI_MODEL       = "ollama/llama3.2"
 
 
 def _get_api_key() -> str:
@@ -429,11 +433,6 @@ def _screen_debug_action(description, file_path, player, speak=None) -> str:
             print(f"[Code] ⚠️ Could not read file: {err}")
 
     try:
-        client = GeminiClient(api_key="")
-
-        image_bytes  = screenshot_path.read_bytes()
-        image_base64 = _image_to_base64(screenshot_path)
-
         user_question = description or "What error or problem do you see on the screen? How can it be fixed?"
 
         context = ""
@@ -452,12 +451,7 @@ Please:
 
 Be specific and actionable. If you see an error message, quote it exactly."""
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=analysis_prompt,
-        )
-
-        analysis = response.text.strip()
+        analysis = generate_text(prompt=analysis_prompt, model="ollama/llama3.2")
         print(f"[Code] ✅ Screen analysis complete")
 
         try:

@@ -45,6 +45,140 @@ try:
 except ImportError:
     safe_system_setting = None
 
+# ── Tool executors map ─────────────────────────────────────────────
+# Maps tool names (as returned by Tool Operator) to callable functions.
+# Each executor receives `params: dict` and returns a structured result dict.
+
+_TOOL_EXECUTORS: dict[str, callable] = {}
+
+try:
+    from embodiment.open_app import launch as _launch_app
+    _TOOL_EXECUTORS["open_app"] = lambda params: {
+        "tool": "app_launcher", "status": "executed",
+        "result": _launch_app(params.get("app_name", "")),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.browser_control import browser_control as _browser_control
+    _TOOL_EXECUTORS["browser_control"] = lambda params: {
+        "tool": "browser_navigation", "status": "executed",
+        "result": _browser_control(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.web_search import web_search as _web_search
+    _TOOL_EXECUTORS["web_search"] = lambda params: {
+        "tool": "web_search", "status": "executed",
+        "result": _web_search(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.vision import Vision as _Vision
+    _TOOL_EXECUTORS["screen_vision"] = lambda params: {
+        "tool": "screen_vision", "status": "executed",
+        "result": _Vision.analyze_screen(
+            params.get("question", "What do you see on this screen?")
+        ).description,
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.code_helper import code_helper as _code_helper
+    _TOOL_EXECUTORS["code_helper"] = lambda params: {
+        "tool": "code_generation", "status": "executed",
+        "result": _code_helper(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.weather_report import weather_action as _weather_action
+    _TOOL_EXECUTORS["weather_report"] = lambda params: {
+        "tool": "weather", "status": "executed",
+        "result": _weather_action(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.reminder import reminder as _reminder
+    _TOOL_EXECUTORS["reminder"] = lambda params: {
+        "tool": "reminders", "status": "executed",
+        "result": _reminder(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.youtube_video import youtube_video as _youtube_video
+    _TOOL_EXECUTORS["youtube"] = lambda params: {
+        "tool": "youtube", "status": "executed",
+        "result": _youtube_video(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.desktop import desktop_control as _desktop_control
+    _TOOL_EXECUTORS["desktop_control"] = lambda params: {
+        "tool": "desktop_control", "status": "executed",
+        "result": _desktop_control(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.flight_finder import flight_finder as _flight_finder
+    _TOOL_EXECUTORS["flight_search"] = lambda params: {
+        "tool": "flight_search", "status": "executed",
+        "result": _flight_finder(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.send_message import send_message as _send_message
+    _TOOL_EXECUTORS["messaging"] = lambda params: {
+        "tool": "messaging", "status": "executed",
+        "result": _send_message(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.game_updater import game_updater as _game_updater
+    _TOOL_EXECUTORS["game_updater"] = lambda params: {
+        "tool": "game_updater", "status": "executed",
+        "result": _game_updater(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.file_processor import file_processor as _file_processor
+    _TOOL_EXECUTORS["file_processor"] = lambda params: {
+        "tool": "file_processor", "status": "executed",
+        "result": _file_processor(parameters=params),
+    }
+except ImportError:
+    pass
+
+try:
+    from embodiment.dev_agent import dev_agent as _dev_agent
+    _TOOL_EXECUTORS["project_builder"] = lambda params: {
+        "tool": "project_builder", "status": "executed",
+        "result": _dev_agent(parameters=params),
+    }
+except ImportError:
+    pass
+
 
 VERSION = "0.1.0"
 SESSION_ID = str(uuid.uuid4())
@@ -101,6 +235,29 @@ def process_task(task_text: str) -> str:
             domain="conversational",
         )
         return response
+
+    # ── Asimov command pre-check (before any agent dispatch) ─────────────
+    try:
+        from tools.asimov import check_command
+        asimov_allowed, asimov_reason = check_command(task_text, "", {})
+        if not asimov_allowed:
+            response = f"Asimov safety layer blocked this request.\n\n{asimov_reason}"
+            log_interaction(
+                agent_name="asimov",
+                input_text=task_text,
+                output_text=response,
+                model="asimov",
+                duration_ms=0,
+                session_id=SESSION_ID,
+                task_id=str(uuid.uuid4()),
+                memory_context_snapshot={},
+                tool_calls_made=[],
+                reasoning_trace=asimov_reason,
+                domain="safety",
+            )
+            return response
+    except ImportError:
+        pass  # Asimov module not available — proceed without pre-check
 
     # 1. Commander routes the task
     route = route_task(task_text)
@@ -168,25 +325,46 @@ def process_task(task_text: str) -> str:
                 tool_name = tc.get("tool", "")
                 params = tc.get("params", {})
 
-                # Route through safe wrappers for HIGH-risk tools
-                if tool_name == "file_controller" and safe_file_operation:
+                # 1. Check tool executors map (embodiment tools)
+                executor = _TOOL_EXECUTORS.get(tool_name)
+                if executor:
+                    exec_result = executor(params)
+                # 2. Route through safe wrappers for HIGH-risk tools
+                elif tool_name == "file_controller" and safe_file_operation:
                     exec_result = safe_file_operation(params)
                 elif tool_name == "computer_control" and safe_computer_action:
                     exec_result = safe_computer_action(params)
                 elif tool_name == "computer_settings" and safe_system_setting:
                     exec_result = safe_system_setting(params)
                 else:
-                    # LOW/MEDIUM risk tools execute directly
-                    exec_result = {"tool": tool_name, "status": "executed", "params": params}
+                    # Unknown tool — provide a meaningful unavailable response
+                    exec_result = {
+                        "tool": tool_name,
+                        "status": "unavailable",
+                        "result": f"Tool '{tool_name}' is not available in this environment."
+                    }
 
                 executed.append(exec_result)
 
             if executed:
-                purpose_list = [f"{e.get('tool', 'tool')} ({e.get('status', 'done')})" for e in executed]
-                response = f"Completed: {', '.join(purpose_list)}"
+                details = []
+                result_texts = []
+                for e in executed:
+                    tool = e.get("tool", tool_name)
+                    status = e.get("status", "done")
+                    details.append(f"{tool} ({status})")
+                    raw = e.get("result", "")
+                    if isinstance(raw, dict):
+                        raw = str(raw.get("result", raw.get("status", str(raw))))
+                    if isinstance(raw, str) and raw and raw not in result_texts:
+                        result_texts.append(raw)
+
+                response = " | ".join(details)
                 if any(e.get("needs_approval") for e in executed):
                     pending = [e for e in executed if e.get("needs_approval")]
-                    response += f" {len(pending)} awaiting approval."
+                    response += f" | {len(pending)} awaiting approval."
+                if result_texts:
+                    response += "\n" + "\n".join(result_texts[:3])
             else:
                 response = "No tools were needed for this task."
 
@@ -303,11 +481,13 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="SAGE — Cognitive Operating System")
-    parser.add_argument("--voice", action="store_true", help="Voice mode")
+    parser.add_argument("--voice", action="store_true", help="Voice mode (terminal)")
     parser.add_argument("--test", action="store_true", help="Run E2E verification")
     parser.add_argument("--providers", action="store_true", help="List LLM providers")
     parser.add_argument("--stats", action="store_true", help="Show interaction stats")
-    parser.add_argument("--ui", action="store_true", help="Launch PyQt6 GUI")
+    parser.add_argument("--text", action="store_true", help="Text-only mode (no UI)")
+    parser.add_argument("--ui", action="store_true", help="Launch PyQt6 GUI (with voice)")
+    parser.add_argument("--no-voice", action="store_true", help="Launch UI without voice")
     args = parser.parse_args()
 
     if args.test:
@@ -322,8 +502,17 @@ if __name__ == "__main__":
         print(json.dumps(get_stats(), indent=2))
     elif args.voice:
         voice_mode()
-    elif args.ui:
+    elif args.text:
+        text_mode()
+    elif args.no_voice:
         from ui import run_ui
         run_ui(process_fn=process_task)
     else:
-        text_mode()
+        # Default: launch PyQt6 GUI with voice auto-started
+        print("  SAGE — launching UI with voice...")
+        try:
+            from ui import run_ui
+            run_ui(process_fn=process_task, auto_voice=True)
+        except ImportError:
+            print("PyQt6 not installed. Falling back to text mode.")
+            text_mode()

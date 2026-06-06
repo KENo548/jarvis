@@ -26,11 +26,13 @@ def _test(name: str, fn):
         ms = int((time.time() - t0) * 1000)
         RESULTS.append({"name": name, "passed": passed, "ms": ms, "detail": detail})
         icon = "PASS" if passed else "FAIL"
-        print(f"  [{icon}] {name} ({ms}ms) — {detail}")
+        safe_detail = str(detail).encode('ascii', errors='replace').decode('ascii')
+        print(f"  [{icon}] {name} ({ms}ms) — {safe_detail}")
     except Exception as e:
         ms = int((time.time() - t0) * 1000)
-        RESULTS.append({"name": name, "passed": False, "ms": ms, "detail": str(e)})
-        print(f"  [FAIL] {name} ({ms}ms) — {e}")
+        safe_detail = str(e).encode('ascii', errors='replace').decode('ascii')
+        RESULTS.append({"name": name, "passed": False, "ms": ms, "detail": safe_detail})
+        print(f"  [FAIL] {name} ({ms}ms) — {safe_detail}")
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +50,7 @@ def test_capability_registry():
             cap = get_capability(name)
             if cap is None:
                 return False, f"Missing capability: {name}"
-        high_risk = [c for c in CAPABILITIES if c.approval_required]
+        high_risk = [c for c in CAPABILITIES.values() if c.approval_required]
         if len(high_risk) < 2:
             return False, f"Only {len(high_risk)} capabilities require approval (need 2+)"
         return True, f"{len(CAPABILITIES)} capabilities, {len(high_risk)} with approval gate"
@@ -117,10 +119,11 @@ def test_open_app():
     from open_app import launch
 
     def run():
-        result = launch({"app_name": "notepad"})
-        if result and ("opened" in str(result).lower() or "launched" in str(result).lower() or "notepad" in str(result).lower()):
-            return True, str(result)[:80]
-        return False, f"Unexpected result: {str(result)[:80]}"
+        result = launch("notepad")
+        result_str = str(result).encode('ascii', errors='replace').decode('ascii')
+        if result and ("opened" in result_str.lower() or "launched" in result_str.lower() or "notepad" in result_str.lower()):
+            return True, result_str[:80]
+        return False, f"Unexpected result: {result_str[:80]}"
     _test("open_app", run)
 
 
@@ -132,10 +135,12 @@ def test_file_controller():
     from file_controller import file_controller
 
     def run():
-        result = file_controller({"action": "list", "path": "home"})
-        if result and "files" in str(result).lower() or "entries" in str(result).lower() or isinstance(result, dict):
-            return True, "File listing returned data"
-        return False, f"Unexpected result: {str(result)[:80]}"
+        from pathlib import Path
+        result = file_controller({"action": "list", "path": str(Path.home() / "Downloads")})
+        result_str = str(result).encode('ascii', errors='replace').decode('ascii')
+        if result and ("files" in result_str.lower() or "entries" in result_str.lower() or "contents" in result_str.lower() or "items" in result_str.lower() or isinstance(result, dict)):
+            return True, f"File listing returned ({len(result_str)} chars)"
+        return False, f"Unexpected result: {result_str[:80]}"
     _test("file_controller_list", run)
 
 
@@ -148,7 +153,8 @@ def test_browser_control():
 
     def run():
         result = browser_control({"action": "list_browsers"})
-        return True, f"Browser control responded: {str(result)[:60]}"
+        result_str = str(result).encode('ascii', errors='replace').decode('ascii')
+        return True, f"Browser control responded: {result_str[:60]}"
     _test("browser_control", run)
 
 

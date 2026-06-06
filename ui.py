@@ -265,12 +265,13 @@ class SageUI(QMainWindow):
     voice_status_ready = pyqtSignal(str)
     pipeline_ready = pyqtSignal(str, str, str)
 
-    def __init__(self, process_fn=None):
+    def __init__(self, process_fn=None, auto_voice=False):
         super().__init__()
         self.process_fn = process_fn
         self.metrics = SysMetrics()
         self._voice_active = False
         self._processing = False
+        self._auto_voice = auto_voice
 
         # Connect signals
         self.response_ready.connect(self._on_response)
@@ -283,6 +284,8 @@ class SageUI(QMainWindow):
         self.resize(1000, 700)
 
         self._setup_ui()
+        if self._auto_voice:
+            QTimer.singleShot(800, self._toggle_voice)
 
     def _setup_ui(self):
         central = QWidget()
@@ -658,14 +661,14 @@ class SageUI(QMainWindow):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def run_ui(process_fn=None):
+def run_ui(process_fn=None, auto_voice=False):
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
     font = QFont("Georgia", 10)  # Serif font — old money
     app.setFont(font)
 
-    window = SageUI(process_fn=process_fn)
+    window = SageUI(process_fn=process_fn, auto_voice=auto_voice)
     window.show()
 
     return app.exec()

@@ -4,7 +4,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+from tools.llm_client import llm_call
+
+
+def _generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
 
 def _get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -17,18 +21,7 @@ API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 
 
 def _gemini_search(query: str) -> str:
-    client   = GeminiClient(api_key="")
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=query,
-    )
-
-    text = ""
-    for part in response.candidates[0].content.parts:
-        if hasattr(part, "text") and part.text:
-            text += part.text
-
-    text = text.strip()
+    text = _generate_text(prompt=query, model="ollama/llama3.2").strip()
     if not text:
         raise ValueError("Gemini returned an empty response.")
     return text

@@ -1,0 +1,121 @@
+{
+  "timestamp": "2026-06-06T23:53:31.072230",
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "warnings": 0,
+    "critical": 0
+  },
+  "checks": [
+    {
+      "name": "Ollama Service",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "Ollama running, models: llama3.2:latest, nomic-embed-text:latest",
+      "start": 1780770202.3152404,
+      "elapsed_ms": 6498
+    },
+    {
+      "name": "Whisper STT Service",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "Whisper running \u2014 model: base",
+      "start": 1780770208.813649,
+      "elapsed_ms": 6
+    },
+    {
+      "name": "Network Connectivity",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "All service endpoints reachable",
+      "start": 1780770208.8204765,
+      "elapsed_ms": 1
+    },
+    {
+      "name": "Docker Containers",
+      "category": "services",
+      "critical": false,
+      "status": "pass",
+      "detail": "3/3 critical containers up",
+      "start": 1780770208.8221238,
+      "elapsed_ms": 207
+    },
+    {
+      "name": "Edge TTS",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "edge-tts 7.2.8: 322 voices available, 3 preferred voice(s) found",
+      "start": 1780770209.0292108,
+      "elapsed_ms": 1476
+    },
+    {
+      "name": "Sounddevice Audio",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "sounddevice 0.5.5: 22 mic(s), 16 speaker(s) \u2014 default mic: Microphone Array (Intel\u00ae Smart , default speaker: Headphones (BLAUPUNKT BH)",
+      "start": 1780770210.5061104,
+      "elapsed_ms": 99
+    },
+    {
+      "name": "PyQt6",
+      "category": "dependencies",
+      "critical": false,
+      "status": "pass",
+      "detail": "PyQt6 6.11.0",
+      "start": 1780770210.606128,
+      "elapsed_ms": 25
+    },
+    {
+      "name": "Playwright Browser",
+      "category": "dependencies",
+      "critical": false,
+      "status": "pass",
+      "detail": "Playwright unknown, browsers: chromium (2 install), firefox (1 install)",
+      "start": 1780770210.6319716,
+      "elapsed_ms": 3
+    },
+    {
+      "name": "FFmpeg",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+      "start": 1780770210.6350877,
+      "elapsed_ms": 41
+    },
+    {
+      "name": "Python Modules",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "All 8 modules importable",
+      "start": 1780770210.6769254,
+      "elapsed_ms": 372
+    },
+    {
+      "name": "Voice Pipeline (dry-run)",
+      "category": "pipeline",
+      "critical": true,
+      "status": "pass",
+      "detail": "Dry-run: 3/3 stages OK",
+      "start": 1780770211.049097,
+      "elapsed_ms": 22
+    },
+    {
+      "name": "Disk Space",
+      "category": "system",
+      "critical": false,
+      "status": "pass",
+      "detail": "490 GB free",
+      "start": 1780770211.0714278,
+      "elapsed_ms": 0
+    }
+  ],
+  "exit_code": 0,
+  "verdict": "PASS"
+}

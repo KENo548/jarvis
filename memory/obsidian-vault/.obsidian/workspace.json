@@ -4,17 +4,24 @@
     "type": "split",
     "children": [
       {
-        "id": "654e7b2aa39a8f49",
+        "id": "317608f9d690f472",
         "type": "tabs",
         "children": [
           {
-            "id": "d623df87b8fdc66d",
+            "id": "a7360faff59d669d",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "type": "canvas",
+              "state": {
+                "file": "Untitled 1.canvas",
+                "viewState": {
+                  "x": 0,
+                  "y": 0,
+                  "zoom": 0
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "Untitled 1"
             }
           }
         ]
@@ -90,6 +97,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "2026-06-03.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,7 +107,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for 2026-06-03"
             }
           },
           {
@@ -108,11 +116,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "linksCollapsed": false,
+                "file": "Untitled 1.canvas",
+                "linksCollapsed": true,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from Untitled 1"
             }
           },
           {
@@ -123,7 +132,7 @@
               "state": {
                 "sortOrder": "frequency",
                 "useHierarchy": true,
-                "showSearch": false,
+                "showSearch": true,
                 "searchQuery": ""
               },
               "icon": "lucide-tags",
@@ -150,20 +159,21 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "2026-06-03.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of 2026-06-03"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -176,9 +186,21 @@
       "bases:Create new base": false
     }
   },
-  "active": "d623df87b8fdc66d",
+  "active": "a7360faff59d669d",
   "lastOpenFiles": [
+    "2026-06-03.md",
+    "Untitled 1.canvas",
+    "Untitled.canvas",
+    "Untitled.base",
+    "Untitled",
+    "USER_PREFERENCES.md",
+    "My Desired Specs.md",
+    "2026-06-02.md",
+    "Plan- Fix the login button color.md",
+    "Plan- Fix a bug in the authentication code.md",
     "JARVIS AI plan.md",
-    "USER_PREFERENCES.md"
+    "Plan- Research documentation.md",
+    "Plan- Plan the project roadmap.md",
+    "Plan- Please research the new toolchain documentation.md"
   ]
 }

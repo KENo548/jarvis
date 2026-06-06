@@ -13,7 +13,9 @@ except ImportError:
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
 _SAFE_ROOTS: list[Path] = [
-    Path.home(),
+    Path.home() / "Desktop",
+    Path.home() / "Documents",
+    Path.home() / "Downloads",
 ]
 
 def _is_safe_path(target: Path) -> bool:
@@ -557,19 +559,60 @@ def safe_file_operation(parameters: dict) -> dict:
     Returns structured result with approval status.
     """
     action = parameters.get("action", "")
+
+    # ── Asimov safety pre-check (runs BEFORE approval gate) ──────────────
+    try:
+        from tools.asimov import check_action
+        target = parameters.get("path", "")
+        if parameters.get("name"):
+            target = str(Path(target) / parameters["name"])
+        asimov_allowed, asimov_reason = check_action(
+            f"file_{action}", target, {"parameters": parameters}
+        )
+        if not asimov_allowed:
+            if "FIRST LAW" in asimov_reason:
+                # First Law — absolute block, no user override
+                print(f"\n🚫 ASIMOV FIRST LAW: {asimov_reason}")
+                return {
+                    "tool": "file_operations",
+                    "action": action,
+                    "needs_approval": True,
+                    "status": "blocked",
+                    "asimov_law": "First Law",
+                    "message": asimov_reason,
+                    "parameters": parameters,
+                }
+            else:
+                # Third Law — user may override via explicit confirmation
+                print(f"\n⚠️  ASIMOV THIRD LAW: {asimov_reason}")
+                response = input("Override Asimov Third Law protection? (y/N): ").strip().lower()
+                if response not in ("y", "yes"):
+                    return {
+                        "tool": "file_operations",
+                        "action": action,
+                        "needs_approval": True,
+                        "status": "blocked",
+                        "asimov_law": "Third Law",
+                        "message": asimov_reason,
+                        "parameters": parameters,
+                    }
+    except ImportError:
+        pass  # Asimov module not available — proceed without it
+
     needs_approval = action in _APPROVAL_REQUIRED
 
     if needs_approval:
-        # In production, this would go through SAGE's approval queue
-        # For now, log the request and return pending status
-        return {
-            "tool": "file_operations",
-            "action": action,
-            "needs_approval": True,
-            "status": "pending_approval",
-            "message": f"File operation '{action}' requires approval. Awaiting user confirmation.",
-            "parameters": parameters,
-        }
+        print(f"\n⚠️  APPROVAL REQUIRED: File operation '{action}' with parameters {parameters}")
+        response = input("Proceed? (y/N): ").strip().lower()
+        if response != 'y':
+            return {
+                "tool": "file_operations",
+                "action": action,
+                "needs_approval": True,
+                "status": "denied",
+                "message": f"File operation '{action}' was rejected by user.",
+                "parameters": parameters,
+            }
 
     # Safe actions execute immediately
     try:

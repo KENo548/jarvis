@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-06-06T23:53:46.144822",
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "warnings": 0,
+    "critical": 0
+  },
+  "checks": [
+    {
+      "name": "Ollama Service",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "Ollama running, models: llama3.2:latest, nomic-embed-text:latest",
+      "start": 1780770215.5780993,
+      "elapsed_ms": 4675
+    },
+    {
+      "name": "Whisper STT Service",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "Whisper running \u2014 model: base",
+      "start": 1780770220.25367,
+      "elapsed_ms": 14
+    },
+    {
+      "name": "Whisper Transcription",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "Whisper responded (empty audio -> \"\")",
+      "start": 1780770220.2684433,
+      "elapsed_ms": 2955
+    },
+    {
+      "name": "Network Connectivity",
+      "category": "services",
+      "critical": true,
+      "status": "pass",
+      "detail": "All service endpoints reachable",
+      "start": 1780770223.2241757,
+      "elapsed_ms": 15
+    },
+    {
+      "name": "Docker Containers",
+      "category": "services",
+      "critical": false,
+      "status": "pass",
+      "detail": "3/3 critical containers up",
+      "start": 1780770223.23998,
+      "elapsed_ms": 260
+    },
+    {
+      "name": "Edge TTS",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "edge-tts 7.2.8: 322 voices available, 3 preferred voice(s) found",
+      "start": 1780770223.5008368,
+      "elapsed_ms": 1320
+    },
+    {
+      "name": "Sounddevice Audio",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "sounddevice 0.5.5: 22 mic(s), 16 speaker(s) \u2014 default mic: Microphone Array (Intel\u00ae Smart , default speaker: Headphones (BLAUPUNKT BH)",
+      "start": 1780770224.8215845,
+      "elapsed_ms": 268
+    },
+    {
+      "name": "PyQt6",
+      "category": "dependencies",
+      "critical": false,
+      "status": "pass",
+      "detail": "PyQt6 6.11.0",
+      "start": 1780770225.0901802,
+      "elapsed_ms": 26
+    },
+    {
+      "name": "Playwright Browser",
+      "category": "dependencies",
+      "critical": false,
+      "status": "pass",
+      "detail": "Playwright unknown, browsers: chromium (2 install), firefox (1 install)",
+      "start": 1780770225.116927,
+      "elapsed_ms": 1
+    },
+    {
+      "name": "FFmpeg",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+      "start": 1780770225.1187992,
+      "elapsed_ms": 41
+    },
+    {
+      "name": "Python Modules",
+      "category": "dependencies",
+      "critical": true,
+      "status": "pass",
+      "detail": "All 8 modules importable",
+      "start": 1780770225.1604922,
+      "elapsed_ms": 277
+    },
+    {
+      "name": "Voice Pipeline (dry-run)",
+      "category": "pipeline",
+      "critical": true,
+      "status": "pass",
+      "detail": "Dry-run: 3/3 stages OK",
+      "start": 1780770225.4378486,
+      "elapsed_ms": 11
+    },
+    {
+      "name": "Audio Loopback Test",
+      "category": "pipeline",
+      "critical": true,
+      "status": "pass",
+      "detail": "Recorded 0.5s \u2014 peak amplitude: 52 (quiet)",
+      "start": 1780770225.4498572,
+      "elapsed_ms": 693
+    },
+    {
+      "name": "Disk Space",
+      "category": "system",
+      "critical": false,
+      "status": "pass",
+      "detail": "490 GB free",
+      "start": 1780770226.1438363,
+      "elapsed_ms": 0
+    }
+  ],
+  "exit_code": 0,
+  "verdict": "PASS"
+}

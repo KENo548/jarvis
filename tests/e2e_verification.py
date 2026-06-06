@@ -1,11 +1,11 @@
 import os
 import json
-from jarvis.tools.llm_client import LLMClient
-from jarvis.tools.interaction_logger import pii_redact, log_interaction
-from jarvis.tools.prompt_store.prompt_registry import register_prompt, get_prompt, diff_versions
-from jarvis.tools.replay.snapshot import capture_snapshot
-from jarvis.tools.export_pipeline import validate_jsonl, create_correction_pairs
-from jarvis.tools.llm_integration import call_llm
+from tools.llm_client import LLMClient
+from observability.interaction_logger import pii_redact, log_interaction
+from tools.prompt_store.prompt_registry import register_prompt, get_prompt, diff_versions
+from tools.replay.snapshot import capture_snapshot
+from tools.export_pipeline import validate_jsonl, create_correction_pairs
+from tools.llm_integration import call_llm
 
 
 def test_pii_redaction():

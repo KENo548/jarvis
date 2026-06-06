@@ -7,8 +7,12 @@ import subprocess
 import platform
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "tools" / "embodiment"))
-from gemini_bridge import generate_text, generate_json, generate_code, GeminiClient, GeminiCompat
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tools.llm_client import llm_call
+
+# Local wrapper replacing gemini_bridge dependency
+def _generate_text(prompt, model=None, system_instruction="", temperature=0.7, max_tokens=2048):
+    return llm_call(prompt=prompt, model=model, system=system_instruction, temperature=temperature, max_tokens=max_tokens).text
 
 try:
     import pyautogui
@@ -595,9 +599,9 @@ Rules:
 - Return ONLY the JSON, no explanation, no markdown."""
 
     try:
-        text = generate_text(
+        text = _generate_text(
             prompt=prompt,
-            model="gemini-2.5-flash-lite",
+            model="ollama/llama3.2",
             temperature=0.3,
         )
         text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
@@ -703,17 +707,57 @@ _APPROVAL_REQUIRED = {"restart", "shutdown", "sleep", "hibernate", "lock_screen"
 def safe_system_setting(parameters: dict) -> dict:
     """SAGE-compatible wrapper with approval gate for destructive settings."""
     action = parameters.get("action", "")
+
+    # ── Asimov safety pre-check (runs BEFORE approval gate) ──────────────
+    try:
+        from tools.asimov import check_action
+        asimov_allowed, asimov_reason = check_action(
+            f"setting_{action}", action, {"parameters": parameters}
+        )
+        if not asimov_allowed:
+            if "FIRST LAW" in asimov_reason:
+                # First Law — absolute block, no user override
+                print(f"\n🚫 ASIMOV FIRST LAW: {asimov_reason}")
+                return {
+                    "tool": "system_settings",
+                    "action": action,
+                    "needs_approval": True,
+                    "status": "blocked",
+                    "asimov_law": "First Law",
+                    "message": asimov_reason,
+                    "parameters": parameters,
+                }
+            else:
+                # Third Law — user may override
+                print(f"\n⚠️  ASIMOV THIRD LAW: {asimov_reason}")
+                response = input("Override Asimov Third Law protection? (y/N): ").strip().lower()
+                if response not in ("y", "yes"):
+                    return {
+                        "tool": "system_settings",
+                        "action": action,
+                        "needs_approval": True,
+                        "status": "blocked",
+                        "asimov_law": "Third Law",
+                        "message": asimov_reason,
+                        "parameters": parameters,
+                    }
+    except ImportError:
+        pass  # Asimov module not available — proceed without it
+
     needs_approval = action in _APPROVAL_REQUIRED
 
     if needs_approval:
-        return {
-            "tool": "system_settings",
-            "action": action,
-            "needs_approval": True,
-            "status": "pending_approval",
-            "message": f"System setting '{action}' requires approval.",
-            "parameters": parameters,
-        }
+        print(f"\n⚠️  APPROVAL REQUIRED: System setting '{action}' with parameters {parameters}")
+        response = input("Proceed? (y/N): ").strip().lower()
+        if response != 'y':
+            return {
+                "tool": "system_settings",
+                "action": action,
+                "needs_approval": True,
+                "status": "denied",
+                "message": f"System setting '{action}' was rejected by user.",
+                "parameters": parameters,
+            }
 
     try:
         result = computer_settings(parameters=parameters)
