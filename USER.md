@@ -13,7 +13,7 @@
 - Security: protected self-modification boundaries, no silent weakening of approval rules
 
 ## Technical Environment
-- Primary: Windows PC with OpenCode 1.18.30
+- Primary: Windows PC with OpenCode 1.18.30 (upgraded from 1.17.4)
 - Secondary: Oracle Cloud VM (1 OCPU, 6GB RAM, ARM64)
 - Mobile: Android with Tailscale/OpenCode mobile access
 - Git: GitHub (private repos)

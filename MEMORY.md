@@ -15,7 +15,7 @@
 
 ## Jarvis Architecture
 - 8 core agents + on-demand specialist skills
-- OpenCode 1.18.30 on both PC and Oracle VM
+- OpenCode 1.18.30 on PC and Oracle VM (upgraded from 1.17.4)
 - Oracle VM: 130.61.60.47, port 4096
 - GitHub as sync layer between PC and Oracle
 

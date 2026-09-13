@@ -9,7 +9,7 @@
       "name": "jarvis",
       "description": "Jarvis orchestration system",
       "paths": {
-        "windows": "C:\\Jarvis-New",
+        "windows": "C:\\Jarvis",
         "linux": "/home/ubuntu/jarvis"
       },
       "type": "orchestration",

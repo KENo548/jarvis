@@ -1,0 +1,28 @@
+{
+  "platform": "linux",
+  "label": "Oracle Cloud ARM64 VM",
+  "resource_profile": "conservative",
+  "hardware": {
+    "cpu_cores": 1,
+    "logical_processors": 1,
+    "ram_gb": 6.0,
+    "note": "ARM64 OCPU — conservative concurrency"
+  },
+  "concurrency": {
+    "max_parallel_subagents": 3,
+    "max_delegation_depth": 2,
+    "max_concurrent_file_edits": 1,
+    "max_concurrent_bash_commands": 2,
+    "memory_ceiling_gb": 4.5
+  },
+  "capabilities": {
+    "desktop_automation": false,
+    "voice_io": false,
+    "browser_automation": true,
+    "powershell_tools": false,
+    "bash_tools": true,
+    "local_services": true
+  },
+  "tool_platform": "bash",
+  "path_style": "linux"
+}

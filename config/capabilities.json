@@ -25,7 +25,7 @@
     {
       "id": "web-testing",
       "name": "Web Testing & QA",
-      "skill": "jarvis-gstack",
+      "skill": "jarvis-browser-automation",
       "triggers": ["test", "qa", "screenshot", "visual", "responsive", "browse"],
       "description": "Headless browser testing, visual QA, responsive testing"
     },
@@ -46,7 +46,7 @@
     {
       "id": "security",
       "name": "Security Scanning",
-      "skill": "jarvis-vault",
+      "skill": "jarvis-security",
       "triggers": ["security", "vulnerability", "secret", "auth", "csrf", "xss"],
       "description": "Security analysis, secret detection, vulnerability scanning"
     },
@@ -84,6 +84,13 @@
       "skill": "jarvis-self-improvement",
       "triggers": ["learn", "pattern", "improve", "optimize", "retro"],
       "description": "Self-improvement, pattern recognition, and optimization"
+    },
+    {
+      "id": "governance",
+      "name": "Governance & Authority Model",
+      "skill": "jarvis-governance",
+      "triggers": ["governance", "authority", "risk", "approval", "kill switch", "security boundary", "sage"],
+      "description": "Three-tier authority model, risk classification, approval gates, kill-switch philosophy"
     }
   ]
 }

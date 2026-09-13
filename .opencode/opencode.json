@@ -55,27 +55,6 @@
     }
   },
   "mcp": {
-    "memory": {
-      "type": "local",
-      "command": ["npx", "-y", "@anthropic/memory-server"],
-      "enabled": true,
-      "environment": {
-        "MEMORY_FILE": "agent-artifacts/memory.json"
-      }
-    },
-    "docker": {
-      "type": "local",
-      "command": ["npx", "-y", "@anthropic/docker-server"],
-      "enabled": true
-    },
-    "sqlite": {
-      "type": "local",
-      "command": ["npx", "-y", "@anthropic/sqlite-server"],
-      "enabled": true,
-      "environment": {
-        "SQLITE_DB": "agent-artifacts/jarvis.db"
-      }
-    }
   },
   "permission": {
     "read": "allow",

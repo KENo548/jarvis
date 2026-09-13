@@ -1,0 +1,28 @@
+{
+  "platform": "windows",
+  "label": "Windows PC",
+  "resource_profile": "standard",
+  "hardware": {
+    "cpu_cores": 4,
+    "logical_processors": 8,
+    "ram_gb": 7.8,
+    "detected_at": "2026-09-13"
+  },
+  "concurrency": {
+    "max_parallel_subagents": 4,
+    "max_delegation_depth": 3,
+    "max_concurrent_file_edits": 2,
+    "max_concurrent_bash_commands": 4,
+    "memory_ceiling_gb": 6.0
+  },
+  "capabilities": {
+    "desktop_automation": true,
+    "voice_io": true,
+    "browser_automation": true,
+    "powershell_tools": true,
+    "bash_tools": false,
+    "local_services": true
+  },
+  "tool_platform": "powershell",
+  "path_style": "windows"
+}
