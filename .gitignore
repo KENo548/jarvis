@@ -1,0 +1,30 @@
+# JARVIS New — .gitignore
+
+# Runtime artifacts
+agent-artifacts/
+node_modules/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary
+*.tmp
+*.bak
+*.swp

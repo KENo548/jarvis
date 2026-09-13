@@ -1,0 +1,89 @@
+{
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "id": "react",
+      "name": "React Development",
+      "skill": "jarvis-react",
+      "triggers": ["react", "tsx", "jsx", "vite", "tailwind", "zustand"],
+      "description": "React component development with hooks, state management, and modern patterns"
+    },
+    {
+      "id": "laravel",
+      "name": "Laravel/PHP Development",
+      "skill": "jarvis-laravel",
+      "triggers": ["laravel", "php", "blade", "eloquent", "middleware"],
+      "description": "Laravel web application development with PHP"
+    },
+    {
+      "id": "prisma",
+      "name": "Prisma ORM",
+      "skill": "jarvis-prisma",
+      "triggers": ["prisma", "schema.prisma", "migration", "database schema"],
+      "description": "Prisma database schema design and migrations"
+    },
+    {
+      "id": "web-testing",
+      "name": "Web Testing & QA",
+      "skill": "jarvis-gstack",
+      "triggers": ["test", "qa", "screenshot", "visual", "responsive", "browse"],
+      "description": "Headless browser testing, visual QA, responsive testing"
+    },
+    {
+      "id": "git",
+      "name": "Git Workflow",
+      "skill": "jarvis-git",
+      "triggers": ["git", "commit", "branch", "merge", "rebase", "pr"],
+      "description": "Git operations, branching, and collaboration"
+    },
+    {
+      "id": "infra",
+      "name": "Infrastructure & DevOps",
+      "skill": "jarvis-infra",
+      "triggers": ["docker", "nginx", "deploy", "ci/cd", "render", "aws", "oracle"],
+      "description": "Infrastructure, containerization, and deployment"
+    },
+    {
+      "id": "security",
+      "name": "Security Scanning",
+      "skill": "jarvis-vault",
+      "triggers": ["security", "vulnerability", "secret", "auth", "csrf", "xss"],
+      "description": "Security analysis, secret detection, vulnerability scanning"
+    },
+    {
+      "id": "architecture",
+      "name": "System Architecture",
+      "skill": "jarvis-architecture",
+      "triggers": ["architecture", "design", "pattern", "scaling", "data flow"],
+      "description": "System design, architectural patterns, scaling strategies"
+    },
+    {
+      "id": "browser",
+      "name": "Browser Automation",
+      "skill": "jarvis-browser-automation",
+      "triggers": ["browser", "playwright", "scrape", "screenshot", "automate"],
+      "description": "Web scraping, automated testing, screenshot capture"
+    },
+    {
+      "id": "deployment",
+      "name": "CI/CD & Deployment",
+      "skill": "jarvis-deployment",
+      "triggers": ["deploy", "ci/cd", "github actions", "vercel", "render"],
+      "description": "Continuous integration, deployment pipelines, and hosting"
+    },
+    {
+      "id": "multimodal",
+      "name": "Visual QA & Screenshots",
+      "skill": "jarvis-multimodal",
+      "triggers": ["screenshot", "visual", "compare", "diff", "ui review"],
+      "description": "Visual quality assurance, screenshot comparison, UI review"
+    },
+    {
+      "id": "self-improvement",
+      "name": "Learning & Patterns",
+      "skill": "jarvis-self-improvement",
+      "triggers": ["learn", "pattern", "improve", "optimize", "retro"],
+      "description": "Self-improvement, pattern recognition, and optimization"
+    }
+  ]
+}

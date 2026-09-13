@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "auto_allow": [
+    "read", "glob", "grep", "todowrite", "skill",
+    "webfetch", "websearch", "lsp", "question"
+  ],
+  "auto_allow_edit": [
+    "write", "edit", "apply_patch"
+  ],
+  "protected_paths": [
+    ".opencode/instructions/",
+    ".opencode/agents/",
+    "config/security-policy.json",
+    "config/orchestration.md",
+    ".env",
+    ".git/"
+  ],
+  "require_approval": [
+    { "pattern": "rm -rf *", "reason": "Destructive delete" },
+    { "pattern": "rm -r *", "reason": "Recursive delete" },
+    { "pattern": "DROP TABLE", "reason": "Database destructive" },
+    { "pattern": "DELETE FROM * WHERE 1=1", "reason": "Mass data deletion" },
+    { "pattern": "git push --force *", "reason": "Force push" },
+    { "pattern": "git reset --hard *", "reason": "Hard reset" },
+    { "pattern": "docker rm *", "reason": "Container deletion" },
+    { "pattern": "docker rmi *", "reason": "Image deletion" },
+    { "pattern": "curl * | bash", "reason": "Remote code execution" },
+    { "pattern": "sudo *", "reason": "Privilege escalation" },
+    { "pattern": "chmod 777 *", "reason": "Overly permissive" },
+    { "pattern": "curl -X POST *", "reason": "External data mutation" },
+    { "pattern": "Invoke-WebRequest -Method Post *", "reason": "External data mutation" },
+    { "pattern": "Invoke-RestMethod -Method Post *", "reason": "External data mutation" }
+  ],
+  "blocked": [
+    { "pattern": "curl * | bash", "reason": "Remote code execution" }
+  ]
+}

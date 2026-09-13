@@ -1,0 +1,93 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "description": "Jarvis orchestrator with full tool access",
+      "permission": {
+        "edit": {
+          "*": "ask",
+          ".opencode/instructions/*": "ask",
+          ".opencode/agents/*": "ask",
+          "config/security-policy.json": "ask",
+          "config/orchestration.md": "ask",
+          ".env": "ask",
+          ".git/*": "ask"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf *": "ask",
+          "rm -r *": "ask",
+          "git push --force *": "ask",
+          "git reset --hard *": "ask",
+          "sudo *": "ask",
+          "curl * | bash *": "deny"
+        },
+        "task": {
+          "*": "allow",
+          "jarvis-planner": "allow",
+          "jarvis-orchestrator": "allow",
+          "jarvis-engineer": "allow",
+          "jarvis-researcher": "allow",
+          "jarvis-reviewer": "allow",
+          "jarvis-qa": "allow",
+          "jarvis-oversight": "allow",
+          "jarvis-web": "allow"
+        },
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "plan": {
+      "mode": "primary",
+      "description": "Planning and analysis without code changes",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "ask",
+          "git status*": "allow",
+          "git log*": "allow",
+          "grep *": "allow",
+          "find *": "allow"
+        }
+      }
+    }
+  },
+  "mcp": {
+    "memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropic/memory-server"],
+      "enabled": true,
+      "environment": {
+        "MEMORY_FILE": "agent-artifacts/memory.json"
+      }
+    },
+    "docker": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropic/docker-server"],
+      "enabled": true
+    },
+    "sqlite": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropic/sqlite-server"],
+      "enabled": true,
+      "environment": {
+        "SQLITE_DB": "agent-artifacts/jarvis.db"
+      }
+    }
+  },
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "todowrite": "allow",
+    "skill": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "lsp": "allow",
+    "question": "allow",
+    "external_directory": "ask",
+    "doom_loop": "ask"
+  }
+}

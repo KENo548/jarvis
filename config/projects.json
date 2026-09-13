@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "platforms": {
+    "windows": { "base": "C:\\", "home": "C:\\Users\\Admin" },
+    "linux": { "base": "/home/ubuntu", "home": "/home/ubuntu" }
+  },
+  "projects": [
+    {
+      "name": "jarvis",
+      "description": "Jarvis orchestration system",
+      "paths": {
+        "windows": "C:\\Jarvis-New",
+        "linux": "/home/ubuntu/jarvis"
+      },
+      "type": "orchestration",
+      "technologies": ["opencode", "markdown", "json"],
+      "repos": {
+        "github": "https://github.com/KENo548/jarvis"
+      }
+    },
+    {
+      "name": "meridian",
+      "description": "Finance job application tracker",
+      "paths": {
+        "windows": "C:\\Users\\Admin\\Documents\\Meridian",
+        "linux": "/home/ubuntu/meridian"
+      },
+      "type": "webapp",
+      "technologies": ["react", "vite", "typescript", "tailwind", "node"],
+      "repos": {
+        "github": "https://github.com/KENo548/meridian"
+      }
+    },
+    {
+      "name": "dave",
+      "description": "MinIO backup system",
+      "paths": {
+        "windows": "C:\\Jarvis\\Projects\\dave",
+        "linux": "/home/ubuntu/dave"
+      },
+      "type": "tool",
+      "technologies": ["opencode", "minio", "powershell"]
+    }
+  ]
+}
