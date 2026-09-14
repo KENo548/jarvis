@@ -110,12 +110,38 @@ Material modifications to these require explicit user approval:
 - .opencode/agents/
 - config/security-policy.json
 - config/orchestration.md
+- config/tools.json
+- package.json
+- package-lock.json
 - .env
 - .git/
 
-JARVIS may inspect these autonomously. It may propose improvements. But finalizing changes to Commander instructions, agent authority, security policy, approval rules, or orchestration governance requires user approval.
+JARVIS may inspect these autonomously. It may propose improvements. But finalizing changes to Commander instructions, agent authority, security policy, approval rules, toolchain pins, or orchestration governance requires user approval.
 
 A self-improvement mechanism must never silently weaken its own security/approval boundaries.
+
+## Tool Routing
+
+`config/tools.json` is the Tool Capability Registry — the source of truth for what
+CLI/MCP/plugin tools JARVIS may use and which agents/platforms they are sanctioned for.
+
+When a task needs a tool:
+
+1. Query the registry first: `tool_registry_search` (e.g. `<keyword>`). If a matching
+   tool exists, use it; do not improvise equivalent logic.
+2. Prefer order: **native OpenCode → CLI + skill → MCP** (fewer dependencies, less
+   context overhead, fewer failure surfaces).
+3. Respect per-platform defaults (`enabled_by_default` in the registry entry +
+   `enabled_tools` in the platform profile). Example: Playwright is Windows-only for
+   P0; Oracle is browser-free. Never use a disabled tool on a platform just because
+   it exists on another.
+4. Report suspected missing tools to the user; do not install, unpin, or swap
+   toolchain packages autonomously (entries in Protected Boundaries).
+5. Verify tool health after setup with `tools_health`; a failing tool must be
+   reported, not silently worked around.
+
+Run `tools_health` whenever tooling behavior seems off. If the health check fails,
+report it to the user before continuing with the tool.
 
 ## Tone
 

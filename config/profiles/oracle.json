@@ -23,6 +23,11 @@
     "bash_tools": true,
     "local_services": true
   },
+  "enabled_tools": ["context7"],
+  "tool_policy": {
+    "browser_free_p0": true,
+    "note": "Playwright is Windows-only for P0. Oracle stays browser-free; context7 + research cover Oracle needs."
+  },
   "tool_platform": "bash",
   "path_style": "linux"
 }

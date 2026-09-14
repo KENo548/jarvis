@@ -1,0 +1,11 @@
+{
+  "name": "jarvis",
+  "version": "3.0.0",
+  "private": true,
+  "description": "JARVIS orchestration workspace — project-local toolchain for the PC/Oracle shared brain",
+  "devDependencies": {
+    "@playwright/cli": "0.1.19",
+    "ctx7": "0.5.11",
+    "playwright": "1.63.0"
+  }
+}

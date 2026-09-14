@@ -11,6 +11,9 @@
           ".opencode/agents/*": "ask",
           "config/security-policy.json": "ask",
           "config/orchestration.md": "ask",
+          "config/tools.json": "ask",
+          "package.json": "ask",
+          "package-lock.json": "ask",
           ".env": "ask",
           ".git/*": "ask"
         },

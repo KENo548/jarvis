@@ -26,7 +26,7 @@
       "id": "web-testing",
       "name": "Web Testing & QA",
       "skill": "jarvis-browser-automation",
-      "triggers": ["test", "qa", "screenshot", "visual", "responsive", "browse"],
+      "triggers": ["test", "qa", "screenshot", "visual", "responsive", "browse", "playwright-cli", "playwright"],
       "description": "Headless browser testing, visual QA, responsive testing"
     },
     {
@@ -84,6 +84,13 @@
       "skill": "jarvis-self-improvement",
       "triggers": ["learn", "pattern", "improve", "optimize", "retro"],
       "description": "Self-improvement, pattern recognition, and optimization"
+    },
+    {
+      "id": "docs",
+      "name": "Current Library Documentation",
+      "skill": "jarvis-context7",
+      "triggers": ["docs", "documentation", "library", "api reference", "current docs", "context7", "library id"],
+      "description": "Current authoritative library documentation via Context7 CLI"
     },
     {
       "id": "governance",

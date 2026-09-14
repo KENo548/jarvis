@@ -23,6 +23,7 @@
     "bash_tools": false,
     "local_services": true
   },
+  "enabled_tools": ["context7", "playwright"],
   "tool_platform": "powershell",
   "path_style": "windows"
 }

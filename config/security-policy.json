@@ -12,6 +12,9 @@
     ".opencode/agents/",
     "config/security-policy.json",
     "config/orchestration.md",
+    "config/tools.json",
+    "package.json",
+    "package-lock.json",
     ".env",
     ".git/"
   ],

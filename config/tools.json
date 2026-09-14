@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "JARVIS Tool Capability Registry — source of truth for what CLI/MCP/plugin tools JARVIS may use. Per-platform enabled_by_default is authoritative; runtime query is automated.",
+  "version": "1.0.0",
+  "last_verified": "2026-09-14",
+  "tools": [
+    {
+      "id": "context7",
+      "type": "cli+skill",
+      "label": "Context7 — authoritative library docs",
+      "install": "npm install --save-dev ctx7",
+      "mcp_server": null,
+      "cli_commands": [
+        "ctx7 library <query>",
+        "ctx7 docs <id> <query>",
+        "ctx7 list-sources"
+      ],
+      "upstream": "https://github.com/upstash/context7",
+      "install_docs": "https://context7.com/docs/clients/opencode",
+      "purpose": "Pin docs to stable library ID; pull current content with pinned-docs guardrail.",
+      "agents": ["jarvis-researcher", "jarvis-web", "engineer", "qa"],
+      "platforms": ["windows", "oracle", "universal"],
+      "enabled_by_default": true,
+      "verification": { "min_version": "0.5.11", "timeout": 10 },
+      "security": {
+        "notes": "npm package ctx7 (lowercase). Upstash cloud: library resolution + docs use Upstash server; no keys needed for public content. No local file writes by CLI. No shell-eval risk.",
+        "requires_network": true,
+        "required_api_key": "none_public_content"
+      },
+      "resource": {
+        "max_doc_tokens_per_call": 15000,
+        "cache": "Downstream wrapper or shell-level memo"
+      },
+      "dependencies": ["node"],
+      "project_installs_when_missing": "npm ci && npx ctx7 --version"
+    },
+    {
+      "id": "playwright",
+      "type": "cli+skill",
+      "label": "Playwright CLI — authoritative browser and test automation",
+      "install": "npm install --save-dev @playwright/cli && npx playwright install chromium",
+      "mcp_server": null,
+      "cli_commands": [
+        "playwright-cli open <url>",
+        "playwright-cli click <selector>",
+        "playwright-cli fill <selector> <text>",
+        "playwright-cli type <selector> <text>",
+        "playwright-cli snapshot",
+        "playwright-cli screenshot",
+        "playwright-cli press <key>",
+        "playwright-cli hover <selector>",
+        "playwright-cli select <selector> <value>",
+        "playwright-cli check <selector>",
+        "playwright-cli resize <width> <height>",
+        "playwright-cli navigate <url>",
+        "playwright-cli session-list",
+        "playwright-cli session-stop",
+        "playwright-cli install --skills"
+      ],
+      "upstream": "https://github.com/microsoft/playwright-cli",
+      "install_docs": "https://github.com/microsoft/playwright-cli#readme",
+      "purpose": "Browser automation: navigate, click, fill, screenshot, snapshot, form testing. Single-window, silent navigation, human-mirroring cursor.",
+      "agents": ["jarvis-web", "engineer", "qa", "reviewer"],
+      "platforms": ["windows", "universal"],
+      "enabled_by_default": true,
+      "verification": {
+        "min_version": "0.1.19",
+        "timeout": 10,
+        "note": "Playwright CLI package (@playwright/cli) version. Browsers: playwright@1.63.0 (chromium/firefox/webkit) via npx playwright --version."
+      },
+      "security": {
+        "notes": "Single-window headless automation. Anti-bot tested against GeeTest; acceptable for QA. Browser data isolated per session. Clicks are lightweight; test tiny before production.",
+        "requires_network": true,
+        "network_calls": "Playwright installed browsers fetch from CDN; each browser test is local after download.",
+        "browsers": "Chromium, Firefox, WebKit stored in %LOCALAPPDATA%\\ms-playwright (PC) or ~/.cache/ms-playwright (Linux)"
+      },
+      "resource": {
+        "time_budget_per_task_sec": 120,
+        "hard_limit_sec": 180,
+        "store_screenshots": "test-results/*.png",
+        "store_snapshots": "test-results/*.yaml"
+      },
+      "dependencies": ["node", "npm"],
+      "project_installs_when_missing": "npm ci && npx playwright install chromium"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 # Runtime artifacts
 agent-artifacts/
 node_modules/
+test-results/
 *.db
 *.db-journal
 *.db-wal
@@ -28,3 +29,7 @@ desktop.ini
 *.tmp
 *.bak
 *.swp
+
+# P1 task-state artifacts (planned)
+# task-state/*.json
+# .beads/
