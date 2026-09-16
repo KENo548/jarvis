@@ -68,3 +68,26 @@ No automatic filesystem sync. Git is source of truth.
 - Max parallel subagents: 3
 - Max delegation depth: 2
 - Memory ceiling: 4.5GB (leaves 1.5GB for OS)
+
+## Model Evaluation / Routing Policy
+
+Configuration decision applied 2026-09-16. All agents run on frontier/default models (`model:` field absent) for production.
+
+### Free-model bake-off (completed)
+
+A controlled bake-off of free-tier models (muse, mimo, ling, ultra, lightning) was completed across instruction adherence, defect detection, oversight, engineering, agentic tool-use, and artifact-integrity tests.
+
+### Durable conclusions
+
+- **Tested free models are PUBLIC/SYNTHETIC only** under current data policy.
+- **No free model is approved for private-source production roles.**
+- **Frontier/default models remain the production default** for all agents.
+- **Capability winner does not imply data-sensitivity authorization** — routing decisions must be made independently on capability and data policy.
+- **Evaluator-error vs model-error principle**: when an evaluating agent's answer key or rubric is faulty, models that correctly reject it receive credit; a model failing on a faulty key is not evidence of model error.
+- **Free-model availability is temporary/dynamic** (catalog churn, retired models, rate limits) and must not become a hard architectural dependency.
+
+### Future routing dimensions (documented, not implemented)
+
+ROLE + COMPLEXITY + DATA SENSITIVITY + AVAILABILITY + COST
+
+No dynamic routing is active. Static frontier defaults remain the production configuration; any future free-model tier must be explicitly scoped to public/synthetic-only work and re-validated before adoption.

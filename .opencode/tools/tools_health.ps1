@@ -35,9 +35,9 @@ foreach ($tool in $reg.tools) {
     }
 
     try {
-        $version = & $exe --version 2>&1 | Select-Object -First 1
         $minVer = $tool.verification.min_version
-        if ($version -match '\d+\.\d+\.\d+') {
+        $out = & cmd /c "`"$exe`" --version 2>&1" | Out-String
+        if ($out -match '\d+\.\d+\.\d+') {
             $ver = $Matches[0]
             if ([version]$ver -ge [version]$minVer) {
                 Write-Output ("{0} : OK (v{1})" -f $label, $ver)
@@ -46,11 +46,11 @@ foreach ($tool in $reg.tools) {
                 $failed++
             }
         } else {
-            Write-Warning "$label : could not parse version from: $version"
+            Write-Warning "$label : could not parse version from output"
             $failed++
         }
     } catch {
-        Write-Warning "$label : check failed - $_"
+        Write-Warning "$label : check failed - $($_.Exception.Message)"
         $failed++
     }
 }
